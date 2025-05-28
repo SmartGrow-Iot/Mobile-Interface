@@ -48,16 +48,18 @@ smartgrow/
 ├── backend/          # Python backend API
 ├── firmware/         # ESP32 Microcontroller code
 ├── mobile-interface/ # React-native app
-├── docs/             # Project documentation
-├── .env.example      # Environment variables template
-└── README.md         # Main overview
 ```
 
 ---
 
-## 👥 Who to Contact
+## 👥 Who to Contact / Assign Reviewer
 
-If you’re unsure about anything, reach out to the team:
+(Make sure to confirm with the Code Standards assigned by SQA G12)
+1. Tag your Project Leader for review
+2. Tag your Software Tester for review
+3. Tag member from G12 Team for review
+
+If you’re unsure about anything, reach out to the team 12:
 
 | Name                          | Role                        | Username     |
 | ----------------------------- | --------------------------- | ------------ |
@@ -84,7 +86,92 @@ If you’re unsure about anything, reach out to the team:
     ```
     
 - **Testing:** Make sure everything runs before submitting a PR.
+
+## 📌 Versioning of Commits and Releases
+
+To maintain a consistent and traceable codebase, we follow a structured approach to **commit versioning** and **release versioning**.
+
+---
+
+### ✅ Commit Versioning
+
+#### Common Commit Types:
+
+- `feat`: A new feature
+- `fix`: A bug fix
+- `docs`: Documentation only changes
+- `style`: Code formatting, missing semi-colons, etc (no code change)
+- `refactor`: A code change that neither fixes a bug nor adds a feature
+- `perf`: A code change that improves performance
+- `test`: Adding missing tests or correcting existing ones
+- `chore`: Changes to build process, CI, tooling, etc
+- `revert`: Revert a previous commit
     
+
+#### Examples:
+
+```bash
+feat(auth): add JWT token-based authentication
+fix(payment): handle currency mismatch issue
+docs(readme): update installation instructions
+```
+
+#### Tips:
+
+- Use the imperative mood in the subject line (e.g., "fix" not "fixed" or "fixes").
+---
+
+### 🚀 Release Versioning
+
+We use [**Semantic Versioning**](https://semver.org/) (`MAJOR.MINOR.PATCH`) for all official releases.
+
+#### Version Format:
+
+```
+v<MAJOR>.<MINOR>.<PATCH>
+```
+
+#### Rules:
+
+- **MAJOR**: Incompatible API changes
+- **MINOR**: Backward-compatible functionality
+- **PATCH**: Backward-compatible bug fixes
+    
+
+#### Examples:
+
+- `v1.0.0`: First stable release
+- `v1.1.0`: Added a feature in a backward-compatible manner
+- `v1.1.1`: Fixed a bug without affecting the API
+    
+
+#### Tagging a Release:
+
+Make sure the main branch is up-to-date, then:
+
+```bash
+git tag -a v1.2.0 -m "Release v1.2.0: Added X feature and fixed Y issue"
+git push origin v1.2.0
+```
+
+#### Changelog:
+
+Each release must be accompanied by a changelog entry in `CHANGELOG.md` or GitHub Releases tab.
+
+![image](https://github.com/user-attachments/assets/d5ea957c-afae-40f0-9fda-b4580460fe3d)
+
+---
+
+### 📄 Additional Notes
+
+- Always squash commits before merging if your PR includes multiple non-meaningful commits (e.g., "fix typo", "add debug logs").
+    
+- Only maintainers may create release tags, unless explicitly granted permission.
+    
+
+---
+
+Let me know if you want this tailored for a specific tech stack, project type (library, app, etc), or organization format (monorepo, microservices, etc).
 
 ---
 
