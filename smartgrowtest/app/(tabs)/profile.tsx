@@ -6,10 +6,12 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../contexts/AuthContext";
+import Header from "../../components/Header"; // Adjust path as needed
 
 export default function ProfileScreen() {
   const { logout, user } = useAuth();
@@ -44,165 +46,183 @@ export default function ProfileScreen() {
   if (showAddPlant) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile</Text>
-          <TouchableOpacity
-            onPress={() => setShowAddPlant(false)}
-            style={{ position: "absolute", right: 20, top: 0 }}
-          >
-            <Ionicons name="close" size={28} color="#174d3c" />
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.subHeader}>Plant</Text>
-        <View style={styles.addPlantCardContainer}>
-          <TouchableOpacity style={styles.uploadArea}>
-            <Ionicons name="cloud-upload-outline" size={44} color="#bbb" />
-            <Text style={styles.uploadText}>Upload Image</Text>
-          </TouchableOpacity>
-          <TextInput
-            style={styles.inputModern}
-            placeholder="Enter Plant Name"
-            value={plantName}
-            onChangeText={setPlantName}
-            placeholderTextColor="#aaa"
-          />
-          <TextInput
-            style={styles.inputModern}
-            placeholder="Group Number"
-            value={group}
-            onChangeText={setGroup}
-            placeholderTextColor="#aaa"
-          />
-          <TextInput
-            style={styles.inputModern}
-            placeholder="Plant Type"
-            value={plantType}
-            onChangeText={setPlantType}
-            placeholderTextColor="#aaa"
-          />
-          <Text style={styles.addSensorLabel}>Add Sensor</Text>
-          <View style={styles.sensorsGrid}>
-            <TouchableOpacity
-              style={[styles.sensorBtnModern, { backgroundColor: "#fffbe6" }]}
-            >
-              <Ionicons
-                name="sunny"
-                size={22}
-                color="#f7b731"
-                style={styles.sensorIconModern}
-              />
-              <Text style={styles.sensorLabelModern}>Light Sensor</Text>
+        <Header
+          title="Add Plant"
+          showBackButton={false}
+          customBreadcrumbs={[
+            { label: "Home", route: "/" },
+            { label: "Profile", route: "/(tabs)/profile" },
+            { label: "Add Plant" },
+          ]}
+        />
+
+        <ScrollView style={styles.content}>
+          <Text style={styles.subHeader}>Plant</Text>
+          <View style={styles.addPlantCardContainer}>
+            <TouchableOpacity style={styles.uploadArea}>
+              <Ionicons name="cloud-upload-outline" size={44} color="#bbb" />
+              <Text style={styles.uploadText}>Upload Image</Text>
             </TouchableOpacity>
+            <TextInput
+              style={styles.inputModern}
+              placeholder="Enter Plant Name"
+              value={plantName}
+              onChangeText={setPlantName}
+              placeholderTextColor="#aaa"
+            />
+            <TextInput
+              style={styles.inputModern}
+              placeholder="Group Number"
+              value={group}
+              onChangeText={setGroup}
+              placeholderTextColor="#aaa"
+            />
+            <TextInput
+              style={styles.inputModern}
+              placeholder="Plant Type"
+              value={plantType}
+              onChangeText={setPlantType}
+              placeholderTextColor="#aaa"
+            />
+            <Text style={styles.addSensorLabel}>Add Sensor</Text>
+            <View style={styles.sensorsGrid}>
+              <TouchableOpacity
+                style={[styles.sensorBtnModern, { backgroundColor: "#fffbe6" }]}
+              >
+                <Ionicons
+                  name="sunny"
+                  size={22}
+                  color="#f7b731"
+                  style={styles.sensorIconModern}
+                />
+                <Text style={styles.sensorLabelModern}>Light Sensor</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sensorBtnModern, { backgroundColor: "#f5eee6" }]}
+              >
+                <Ionicons
+                  name="cube"
+                  size={22}
+                  color="#a0522d"
+                  style={styles.sensorIconModern}
+                />
+                <Text style={styles.sensorLabelModern}>Soil Sensor</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sensorBtnModern, { backgroundColor: "#e6f7fb" }]}
+              >
+                <Ionicons
+                  name="cloud-outline"
+                  size={22}
+                  color="#45aaf2"
+                  style={styles.sensorIconModern}
+                />
+                <Text style={styles.sensorLabelModern}>CO2 Sensor</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sensorBtnModern, { backgroundColor: "#fbeee6" }]}
+              >
+                <Ionicons
+                  name="thermometer-outline"
+                  size={22}
+                  color="#eb4d4b"
+                  style={styles.sensorIconModern}
+                />
+                <Text style={styles.sensorLabelModern}>Temperature Sensor</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sensorBtnModern, { backgroundColor: "#e6f7fa" }]}
+              >
+                <Ionicons
+                  name="water-outline"
+                  size={22}
+                  color="#45aaf2"
+                  style={styles.sensorIconModern}
+                />
+                <Text style={styles.sensorLabelModern}>Humidity Sensor</Text>
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity
-              style={[styles.sensorBtnModern, { backgroundColor: "#f5eee6" }]}
+              style={styles.submitBtnModern}
+              onPress={() => setShowAddPlant(false)}
             >
-              <Ionicons
-                name="cube"
-                size={22}
-                color="#a0522d"
-                style={styles.sensorIconModern}
-              />
-              <Text style={styles.sensorLabelModern}>Soil Sensor</Text>
+              <Text style={styles.submitBtnTextModern}>SUBMIT</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
-              style={[styles.sensorBtnModern, { backgroundColor: "#e6f7fb" }]}
+              style={styles.cancelButton}
+              onPress={() => setShowAddPlant(false)}
             >
-              <Ionicons
-                name="cloud-outline"
-                size={22}
-                color="#45aaf2"
-                style={styles.sensorIconModern}
-              />
-              <Text style={styles.sensorLabelModern}>CO2 Sensor</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.sensorBtnModern, { backgroundColor: "#fbeee6" }]}
-            >
-              <Ionicons
-                name="thermometer-outline"
-                size={22}
-                color="#eb4d4b"
-                style={styles.sensorIconModern}
-              />
-              <Text style={styles.sensorLabelModern}>Temperature Sensor</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.sensorBtnModern, { backgroundColor: "#e6f7fa" }]}
-            >
-              <Ionicons
-                name="water-outline"
-                size={22}
-                color="#45aaf2"
-                style={styles.sensorIconModern}
-              />
-              <Text style={styles.sensorLabelModern}>Humidity Sensor</Text>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.submitBtnModern}
-            onPress={() => setShowAddPlant(false)}
-          >
-            <Text style={styles.submitBtnTextModern}>SUBMIT</Text>
-          </TouchableOpacity>
-        </View>
+        </ScrollView>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
-      </View>
+      <Header title="Profile" showSearch={true} />
 
-      <View style={styles.profileSection}>
-        <Text style={styles.name}>{user?.name || "John Doe"}</Text>
-        <Text style={styles.email}>
-          {user?.email || "john.doe@example.com"}
-        </Text>
-        <Text style={styles.group}>Group {user?.groupNumber || "10"}</Text>
-      </View>
+      <ScrollView style={styles.content}>
+        <View style={styles.profileSection}>
+          <View style={styles.avatarContainer}>
+            <Ionicons name="person-circle" size={80} color="#174d3c" />
+          </View>
+          <Text style={styles.name}>{user?.name || "John Doe"}</Text>
+          <Text style={styles.email}>
+            {user?.email || "john.doe@example.com"}
+          </Text>
+          <Text style={styles.group}>Group {user?.groupNumber || "10"}</Text>
+        </View>
 
-      {/* Add Plant as a menu item */}
-      <TouchableOpacity
-        style={styles.menuItem}
-        onPress={() => setShowAddPlant(true)}
-      >
-        <Ionicons name="add-circle-outline" size={24} color="#174d3c" />
-        <Text style={styles.menuText}>Add Plant</Text>
-        <Ionicons name="chevron-forward" size={24} color="#666" />
-      </TouchableOpacity>
+        {/* Add Plant as a menu item */}
+        <View style={styles.menuSection}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => setShowAddPlant(true)}
+          >
+            <View style={styles.menuItemLeft}>
+              <View
+                style={[
+                  styles.menuIconContainer,
+                  { backgroundColor: "#e8f5e8" },
+                ]}
+              >
+                <Ionicons name="add-circle-outline" size={24} color="#174d3c" />
+              </View>
+              <Text style={styles.menuText}>Add Plant</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#666" />
+          </TouchableOpacity>
 
-      <View style={styles.menuSection}>
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="person-outline" size={24} color="#174d3c" />
-          <Text style={styles.menuText}>Edit Profile</Text>
-          <Ionicons name="chevron-forward" size={24} color="#666" />
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuItemLeft}>
+              <View
+                style={[
+                  styles.menuIconContainer,
+                  { backgroundColor: "#fff3e0" },
+                ]}
+              >
+                <Ionicons
+                  name="notifications-outline"
+                  size={24}
+                  color="#f57c00"
+                />
+              </View>
+              <Text style={styles.menuText}>Notifications</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#666" />
+          </TouchableOpacity>
+
+        </View>
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={24} color="#fff" />
+          <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="settings-outline" size={24} color="#174d3c" />
-          <Text style={styles.menuText}>Settings</Text>
-          <Ionicons name="chevron-forward" size={24} color="#666" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="notifications-outline" size={24} color="#174d3c" />
-          <Text style={styles.menuText}>Notifications</Text>
-          <Ionicons name="chevron-forward" size={24} color="#666" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="help-circle-outline" size={24} color="#174d3c" />
-          <Text style={styles.menuText}>Help & Support</Text>
-          <Ionicons name="chevron-forward" size={24} color="#666" />
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Ionicons name="log-out-outline" size={24} color="#fff" />
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 }
@@ -211,65 +231,93 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8f8f8",
-    paddingTop: 32,
   },
-  header: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#174d3c",
+  content: {
+    flex: 1,
   },
   profileSection: {
     alignItems: "center",
-    paddingVertical: 20,
+    paddingVertical: 30,
     backgroundColor: "#fff",
     marginBottom: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  avatarContainer: {
+    marginBottom: 16,
   },
   name: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "bold",
     color: "#333",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   email: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#666",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   group: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#174d3c",
     fontWeight: "600",
+    backgroundColor: "#e8f5e8",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   menuSection: {
     backgroundColor: "#fff",
-    paddingVertical: 8,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
-  menuText: {
+  menuItemLeft: {
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
+  },
+  menuIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
+  },
+  menuText: {
     fontSize: 16,
     color: "#333",
-    marginLeft: 12,
+    fontWeight: "500",
   },
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#ff4444",
-    margin: 20,
+    marginHorizontal: 16,
+    marginBottom: 32,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   logoutText: {
     color: "#fff",
@@ -278,17 +326,18 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   subHeader: {
-    fontSize: 16,
-    fontWeight: "500",
-    alignSelf: "flex-start",
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
     marginLeft: 24,
     marginBottom: 16,
+    marginTop: 8,
   },
   addPlantCardContainer: {
     backgroundColor: "#fff",
-    borderRadius: 24,
+    borderRadius: 20,
     padding: 24,
-    margin: 18,
+    margin: 16,
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -296,47 +345,49 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   uploadArea: {
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: "#e0e0e0",
+    borderStyle: "dashed",
     borderRadius: 16,
-    width: 140,
+    width: "100%",
     height: 120,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 18,
+    marginBottom: 20,
     backgroundColor: "#fafafa",
   },
   uploadText: {
     color: "#888",
-    fontSize: 15,
+    fontSize: 16,
     marginTop: 8,
     fontWeight: "500",
   },
   inputModern: {
     width: "100%",
-    height: 48,
+    height: 50,
     borderRadius: 12,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#f8f8f8",
     borderWidth: 1,
     borderColor: "#e0e0e0",
     paddingHorizontal: 16,
     fontSize: 16,
-    marginBottom: 14,
+    marginBottom: 16,
+    color: "#333",
   },
   addSensorLabel: {
     fontWeight: "bold",
-    fontSize: 16,
+    fontSize: 18,
     alignSelf: "flex-start",
-    marginLeft: 0,
     marginTop: 8,
-    marginBottom: 8,
+    marginBottom: 12,
+    color: "#333",
   },
   sensorsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
     width: "100%",
-    marginBottom: 18,
+    marginBottom: 24,
     gap: 10,
   },
   sensorBtnModern: {
@@ -356,27 +407,42 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   sensorLabelModern: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "500",
-    color: "#222",
+    color: "#333",
   },
   submitBtnModern: {
     backgroundColor: "#174d3c",
-    borderRadius: 22,
+    borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 40,
-    marginTop: 10,
     width: "100%",
     alignItems: "center",
+    marginBottom: 12,
     shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   submitBtnTextModern: {
     color: "#fff",
     fontWeight: "bold",
-    fontSize: 17,
-    letterSpacing: 1,
+    fontSize: 16,
+    letterSpacing: 0.5,
+  },
+  cancelButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    width: "100%",
+    alignItems: "center",
+  },
+  cancelButtonText: {
+    color: "#666",
+    fontWeight: "600",
+    fontSize: 16,
   },
 });
