@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from "react";
+import { authService } from "../services/authService";
 
 type User = {
   id: string;
@@ -47,18 +48,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string,
     groupNumber: string
   ) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const response = await authService.register({
+        name, // This will be mapped to display_name in the service
+        email,
+        password,
+        // Note: groupNumber is not sent to the API since it's not expected
+      });
 
-    const userData: User = {
-      id: "1",
-      email,
-      name,
-      groupNumber,
-    };
+      // Create user data from the API response
+      const userData: User = {
+        id: response.user?.id || response.id || "temp-id",
+        email: response.user?.email || response.email || email,
+        name: response.user?.display_name || response.display_name || name,
+        groupNumber: groupNumber, // Keep this locally since API doesn't handle it
+      };
 
-    setUser(userData);
-    setIsAuthenticated(true);
+      setUser(userData);
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error("Registration error:", error);
+      throw new Error((error as Error).message || "Registration failed");
+    }
   };
 
   const logout = () => {
