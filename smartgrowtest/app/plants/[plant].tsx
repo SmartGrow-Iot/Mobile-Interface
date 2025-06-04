@@ -1,4 +1,4 @@
-// app/plants/[plant].tsx - Refactored PlantProfile
+// app/plants/[plant].tsx - Correct PlantProfile component
 import React from "react";
 import { View, StyleSheet, ScrollView, Alert } from "react-native";
 import { useLocalSearchParams } from "expo-router";
@@ -19,6 +19,7 @@ export default function PlantProfile() {
   const { plant } = useLocalSearchParams();
   const plantKey = typeof plant === "string" ? plant.trim().toUpperCase() : "";
   const data = getPlantDetails(plantKey);
+
 
   // Handle actuator override
   const handleActuatorPress = () => {
@@ -62,7 +63,7 @@ export default function PlantProfile() {
           <EmptyState
             icon="leaf-outline"
             title="Plant not found"
-            subtitle="The plant you're looking for doesn't exist or may have been removed."
+            subtitle={`The plant with ID "${plantKey}" doesn't exist or may have been removed.`}
           />
         </View>
       </View>

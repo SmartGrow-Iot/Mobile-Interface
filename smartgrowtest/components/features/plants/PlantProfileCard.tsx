@@ -1,6 +1,6 @@
 // components/features/plants/PlantProfileCard.tsx
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Image } from "react-native";
 import { Card } from "../../ui/Card";
 
 type PlantProfileCardProps = {
@@ -20,13 +20,45 @@ export function PlantProfileCard({
     large: styles.largeCard,
   };
 
+  // Get local image source based on plant type
+  const getImageSource = () => {
+    if (image === "🌶️") {
+      return require("../../../assets/logo/chili.png");
+    }
+    if (image === "🍆") {
+      return require("../../../assets/logo/eggplant.png");
+    }
+    // Fallback to existing smartgrow logo if plant type unknown
+    return require("../../../assets/logo/smartgrow.png");
+  };
+
+  // Size configurations - increased for better visibility
+  const imageSize = {
+    small: 48,
+    medium: 80,
+    large: 100,
+  };
+
+  console.log("PlantProfileCard - Using local asset for:", image);
+
   return (
     <View style={cardStyle[size]}>
       <Card variant="elevated">
         <View style={styles.content}>
-          <Text style={[styles.plantEmoji, styles[`${size}Emoji`]]}>
-            {image}
-          </Text>
+          {/* Local plant image */}
+          <Image
+            source={getImageSource()}
+            style={[
+              styles.plantImage,
+              {
+                width: imageSize[size],
+                height: imageSize[size],
+              },
+            ]}
+            resizeMode="contain"
+          />
+
+          {/* Plant name */}
           <Text style={[styles.plantName, styles[`${size}Name`]]}>{name}</Text>
         </View>
       </Card>
@@ -36,47 +68,43 @@ export function PlantProfileCard({
 
 const styles = StyleSheet.create({
   smallCard: {
-    width: 100,
-    height: 120,
+    width: 120,
+    height: 140,
   },
   mediumCard: {
-    width: 130,
-    height: 170,
-  },
-  largeCard: {
     width: 160,
     height: 200,
+  },
+  largeCard: {
+    width: 200,
+    height: 240,
   },
   content: {
     alignItems: "center",
     justifyContent: "center",
     flex: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
   },
-  plantEmoji: {
-    textAlign: "center",
-  },
-  smallEmoji: {
-    fontSize: 32,
-  },
-  mediumEmoji: {
-    fontSize: 48,
-  },
-  largeEmoji: {
-    fontSize: 56,
+  plantImage: {
+    marginBottom: 16,
   },
   plantName: {
     fontWeight: "bold",
     textAlign: "center",
     color: "#333",
-    marginTop: 8,
+    flexShrink: 1,
   },
   smallName: {
     fontSize: 12,
+    lineHeight: 16,
   },
   mediumName: {
     fontSize: 16,
+    lineHeight: 20,
   },
   largeName: {
     fontSize: 18,
+    lineHeight: 22,
   },
 });
