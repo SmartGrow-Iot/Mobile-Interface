@@ -1,89 +1,147 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import React, { useState } from "react";
+import { View, StyleSheet, Alert, RefreshControl } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import Header from "../../components/Header";
 
-const sensorIcons: Record<string, string> = {
-  light: "☀️",
-  soil: "🟫",
-  airquality: "🌬️",
-  temperature: "🌡️",
-  humidity: "💧",
-};
+// Import new components
+import { SensorHeader } from "../../components/features/sensors/SensorHeader";
+import { SensorStats } from "../../components/features/sensors/SensorStats";
+import { GroupsList } from "../../components/features/sensors/GroupsList";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { LoadingSpinner } from "../../components/LoadingSpinner";
 
-const sensorNames: Record<string, string> = {
-  light: "Light Sensor",
-  soil: "Soil Sensor",
-  airquality: "Air Quality Sensor",
-  temperature: "Temperature Sensor",
-  humidity: "Humidity Sensor",
-};
-
-const groupData = [
-  { group: "Group 1", icon: "🍆", value: "80% moisture", critical: false },
-  { group: "Group 2", icon: "🌶️", value: "74% moisture", critical: false },
-  { group: "GROUP 3", icon: "🍆", value: "85% moisture", critical: false },
-  { group: "GROUP 4", icon: "🍆", value: "66% moisture", critical: true },
-  { group: "GROUP 5", icon: "🌶️", value: "80% moisture", critical: false },
-  { group: "GROUP 6", icon: "🌶️", value: "90% moisture", critical: false },
-  // Add more items to test scrolling
-  { group: "GROUP 7", icon: "🌶️", value: "75% moisture", critical: false },
-  { group: "GROUP 8", icon: "🍆", value: "88% moisture", critical: false },
-  { group: "GROUP 9", icon: "🌶️", value: "45% moisture", critical: true },
-  { group: "GROUP 10", icon: "🍆", value: "92% moisture", critical: false },
-];
+// Import data and utils
+import {
+  getSensorInfo,
+  getGroupDataBySensor,
+  calculateSensorStats,
+} from "../../data/sensors";
+import { GroupData } from "../../types/Sensor";
 
 export default function SensorDetail() {
   const { sensor } = useLocalSearchParams();
-  const icon = sensorIcons[sensor as string] || "❓";
-  const name = sensorNames[sensor as string] || "Sensor";
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const sensorType = typeof sensor === "string" ? sensor : "";
+  const sensorInfo = getSensorInfo(sensorType);
+  const groupData = getGroupDataBySensor(sensorType);
+  const stats = calculateSensorStats(groupData);
+
+  // Handle group press
+  const handleGroupPress = (group: GroupData) => {
+    Alert.alert(
+      `${group.group} Details`,
+      `Zone: ${group.zone}\nValue: ${group.value}\nStatus: ${
+        group.critical ? "Critical" : "Normal"
+      }`,
+      [
+        {
+          text: "View Zone",
+          onPress: () => {
+            if (group.zone) {
+              router.push(`/plants/zone/${group.zone}`);
+            }
+          },
+        },
+        {
+          text: "OK",
+          style: "cancel",
+        },
+      ]
+    );
+  };
+
+  // Handle refresh
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!sensorInfo) {
+    return (
+      <View style={styles.container}>
+        <Header title="Sensor Not Found" showBackButton={true} />
+        <View style={styles.content}>
+          <EmptyState
+            icon="hardware-chip-outline"
+            title="Sensor not found"
+            subtitle="The sensor you're looking for doesn't exist."
+          />
+        </View>
+      </View>
+    );
+  }
 
   // Custom breadcrumbs for sensor detail page
   const customBreadcrumbs = [
     { label: "Home", route: "/" },
     { label: "Sensors", route: "/(tabs)/sensors" },
-    { label: name }, // Current page (no route)
+    { label: sensorInfo.name },
   ];
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Header
+          title={sensorInfo.name}
+          showBackButton={true}
+          customBreadcrumbs={customBreadcrumbs}
+        />
+        <LoadingSpinner text="Refreshing sensor data..." />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       {/* Header Component */}
       <Header
-        title={name}
+        title={sensorInfo.name}
         showBackButton={true}
         customBreadcrumbs={customBreadcrumbs}
       />
 
-      {/* Main Content in ScrollView */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={true}
-      >
-        {/* Sensor Icon and Name Section */}
-        <View style={styles.sensorHeader}>
-          <Text style={styles.sensorIcon}>{icon}</Text>
-          <Text style={styles.sensorName}>{name}</Text>
+      {/* Main Content - No ScrollView, let FlatList handle scrolling */}
+      <View style={styles.content}>
+        {/* Fixed Header Content */}
+        <View>
+          <SensorHeader
+            icon={sensorInfo.icon}
+            name={sensorInfo.name}
+            description={sensorInfo.description}
+          />
+
+          <SensorStats
+            stats={{
+              ...stats,
+              unit: sensorInfo.unit,
+            }}
+          />
         </View>
 
-        {/* Groups List */}
-        <View style={styles.groupsContainer}>
-          {groupData.map((g, idx) => (
-            <View key={idx} style={styles.groupCard}>
-              <Text style={styles.groupIcon}>{g.icon}</Text>
-              <Text style={styles.groupName}>{g.group}</Text>
-              <Text
-                style={[
-                  styles.groupValue,
-                  g.critical && { color: "#ff4444", fontWeight: "bold" },
-                ]}
-              >
-                {g.value}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
+        {/* Scrollable Groups List */}
+        <GroupsList
+          groups={groupData}
+          onGroupPress={handleGroupPress}
+          showZones={true}
+          title="Group Readings"
+          emptyStateMessage={`No ${sensorInfo.name.toLowerCase()} data available`}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={handleRefresh}
+              colors={["#174d3c"]}
+              tintColor="#174d3c"
+            />
+          }
+        />
+      </View>
     </View>
   );
 }
@@ -93,62 +151,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8f8f8",
   },
-  scrollView: {
+  content: {
     flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 40, // Extra padding at bottom
-  },
-  sensorHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 24,
-    backgroundColor: "#fff",
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  sensorIcon: {
-    fontSize: 48,
-    marginRight: 12,
-  },
-  sensorName: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#174d3c",
-  },
-  groupsContainer: {
-    paddingHorizontal: 16,
-  },
-  groupCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  groupIcon: {
-    fontSize: 32,
-    marginRight: 16,
-  },
-  groupName: {
-    fontWeight: "600",
-    fontSize: 18,
-    flex: 1,
-    color: "#333",
-  },
-  groupValue: {
-    fontSize: 16,
-    color: "#666",
-    fontWeight: "500",
   },
 });
