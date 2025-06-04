@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,19 +7,80 @@ import {
   TextInput,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../contexts/AuthContext";
+import { userService } from "../../services/userService";
 import Header from "../../components/Header"; // Adjust path as needed
 
 export default function ProfileScreen() {
   const { logout, user } = useAuth();
   const router = useRouter();
   const [showAddPlant, setShowAddPlant] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
   const [plantName, setPlantName] = useState("");
   const [group, setGroup] = useState(user?.groupNumber || "Group 10");
   const [plantType, setPlantType] = useState("");
+
+  // Profile data states
+  const [profileData, setProfileData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+
+  // Fetch user profile data from API
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const data = await userService.getCurrentUser();
+      setProfileData(data);
+      setEditName(data.display_name || "");
+      setEditEmail(data.email || "");
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      Alert.alert("Error", "Failed to fetch profile data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update user profile
+  const updateProfile = async () => {
+    if (!editName.trim() || !editEmail.trim()) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await userService.updateProfile({
+        display_name: editName.trim(),
+        email: editEmail.trim(),
+      });
+
+      Alert.alert("Success", "Profile updated successfully!", [
+        {
+          text: "OK",
+          onPress: () => {
+            setShowEditProfile(false);
+            fetchProfile(); // Refresh data
+          },
+        },
+      ]);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      Alert.alert("Error", "Failed to update profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load profile data when component mounts
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
   const handleLogout = async () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -33,7 +94,6 @@ export default function ProfileScreen() {
         onPress: async () => {
           try {
             logout();
-            // Navigate back to auth
             router.replace("/(auth)/signin");
           } catch (error) {
             Alert.alert("Error", "Failed to logout. Please try again.");
@@ -43,6 +103,81 @@ export default function ProfileScreen() {
     ]);
   };
 
+  // Edit Profile View
+  if (showEditProfile) {
+    return (
+      <View style={styles.container}>
+        <Header
+          title="Edit Profile"
+          showBackButton={false}
+          customBreadcrumbs={[
+            { label: "Home", route: "/" },
+            { label: "Profile", route: "/(tabs)/profile" },
+            { label: "Edit Profile" },
+          ]}
+        />
+
+        <ScrollView style={styles.content}>
+          <View style={styles.editProfileContainer}>
+            <Text style={styles.subHeader}>Update Your Information</Text>
+
+            {loading && (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#174d3c" />
+                <Text style={styles.loadingText}>Updating profile...</Text>
+              </View>
+            )}
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Display Name</Text>
+              <TextInput
+                style={styles.inputModern}
+                placeholder="Enter your display name"
+                value={editName}
+                onChangeText={setEditName}
+                placeholderTextColor="#aaa"
+                editable={!loading}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Email Address</Text>
+              <TextInput
+                style={styles.inputModern}
+                placeholder="Enter your email"
+                value={editEmail}
+                onChangeText={setEditEmail}
+                placeholderTextColor="#aaa"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!loading}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.submitBtnModern, loading && styles.buttonDisabled]}
+              onPress={updateProfile}
+              disabled={loading}
+            >
+              <Text style={styles.submitBtnTextModern}>
+                {loading ? "Updating..." : "UPDATE PROFILE"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowEditProfile(false)}
+              disabled={loading}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // Add Plant View (existing)
   if (showAddPlant) {
     return (
       <View style={styles.container}>
@@ -161,24 +296,51 @@ export default function ProfileScreen() {
     );
   }
 
+  // Main Profile View
   return (
     <View style={styles.container}>
       <Header title="Profile" showSearch={true} />
 
       <ScrollView style={styles.content}>
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#174d3c" />
+            <Text style={styles.loadingText}>Loading profile...</Text>
+          </View>
+        )}
+
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
             <Ionicons name="person-circle" size={80} color="#174d3c" />
           </View>
-          <Text style={styles.name}>{user?.name || "John Doe"}</Text>
+          <Text style={styles.name}>
+            {profileData?.display_name || user?.name || "Loading..."}
+          </Text>
           <Text style={styles.email}>
-            {user?.email || "john.doe@example.com"}
+            {profileData?.email || user?.email || "Loading..."}
           </Text>
           <Text style={styles.group}>Group {user?.groupNumber || "10"}</Text>
         </View>
 
-        {/* Add Plant as a menu item */}
         <View style={styles.menuSection}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => setShowEditProfile(true)}
+          >
+            <View style={styles.menuItemLeft}>
+              <View
+                style={[
+                  styles.menuIconContainer,
+                  { backgroundColor: "#e3f2fd" },
+                ]}
+              >
+                <Ionicons name="create-outline" size={24} color="#1976d2" />
+              </View>
+              <Text style={styles.menuText}>Edit Profile</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#666" />
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => setShowAddPlant(true)}
@@ -216,6 +378,20 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={20} color="#666" />
           </TouchableOpacity>
 
+          <TouchableOpacity style={styles.menuItem} onPress={fetchProfile}>
+            <View style={styles.menuItemLeft}>
+              <View
+                style={[
+                  styles.menuIconContainer,
+                  { backgroundColor: "#f3e5f5" },
+                ]}
+              >
+                <Ionicons name="refresh-outline" size={24} color="#9c27b0" />
+              </View>
+              <Text style={styles.menuText}>Refresh Profile</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#666" />
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -267,7 +443,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
+    marginBottom: 8,
   },
+
   menuSection: {
     backgroundColor: "#fff",
     marginHorizontal: 16,
@@ -329,9 +507,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#333",
-    marginLeft: 24,
-    marginBottom: 16,
-    marginTop: 8,
+    marginBottom: 24,
+    textAlign: "center",
+  },
+  editProfileContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 24,
+    margin: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
   },
   addPlantCardContainer: {
     backgroundColor: "#fff",
@@ -343,6 +530,15 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
     alignItems: "center",
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 8,
   },
   uploadArea: {
     borderWidth: 2,
@@ -371,7 +567,6 @@ const styles = StyleSheet.create({
     borderColor: "#e0e0e0",
     paddingHorizontal: 16,
     fontSize: 16,
-    marginBottom: 16,
     color: "#333",
   },
   addSensorLabel: {
@@ -444,5 +639,17 @@ const styles = StyleSheet.create({
     color: "#666",
     fontWeight: "600",
     fontSize: 16,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 16,
+    color: "#666",
   },
 });

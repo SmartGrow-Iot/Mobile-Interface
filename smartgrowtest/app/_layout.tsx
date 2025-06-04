@@ -1,4 +1,4 @@
-// app/_layout.tsx - Updated with actuator override route
+// app/_layout.tsx - Updated with loading state
 import {
   DarkTheme,
   DefaultTheme,
@@ -7,13 +7,31 @@ import {
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { View, Text } from "react-native";
 import "react-native-reanimated";
-import { AuthProvider } from "../contexts/AuthContext";
+import { AuthProvider, useAuth } from "../contexts/AuthContext";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const { loading } = useAuth(); // Add this line
+
+  // Add loading check
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#f5f5f5",
+        }}
+      >
+        <Text style={{ fontSize: 16, color: "#333" }}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
