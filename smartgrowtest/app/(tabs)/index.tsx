@@ -1,162 +1,78 @@
+// app/(tabs)/index.tsx - Refactored HomePage
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-} from "react-native";
+import { View, StyleSheet, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import Header from "../../components/Header"; // Adjust path as needed
+import Header from "../../components/Header";
 
-type Alert = {
-  text: string;
-  color: string;
-  icon: keyof typeof Ionicons.glyphMap;
-};
+// Import new components
+import { AlertsList } from "../../components/features/alerts/AlertsList";
+import { ZoneTabNavigation } from "../../components/features/zones/ZoneTabNavigation";
+import { ZoneGrid } from "../../components/features/zones/ZoneGrid";
 
-type Zone = {
-  name: string;
-  icon: string;
-  status: "Optimal" | "Critical";
-};
-
-type ZoneType = "chili" | "eggplant";
-
-const alerts: Alert[] = [
-  {
-    text: "Light threshold for Zone A is Critical!",
-    color: "#FFD580",
-    icon: "sunny-outline",
-  },
-  {
-    text: "Water threshold for Zone B is Critical!",
-    color: "#AEE2FF",
-    icon: "water-outline",
-  },
-];
-
-const zones: Record<ZoneType, Zone[]> = {
-  chili: [
-    { name: "Zone A", icon: "🌶️", status: "Optimal" },
-    { name: "Zone B", icon: "🌶️", status: "Critical" },
-  ],
-  eggplant: [
-    { name: "Zone C", icon: "🍆", status: "Optimal" },
-    { name: "Zone D", icon: "🍆", status: "Optimal" },
-  ],
-};
+// Import data and types
+import { mockAlerts } from "../../data/alerts";
+import { mockZoneCategories } from "../../data/zones";
+import { Alert } from "../../types/Alert";
+import { Zone } from "../../types/Zone";
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<ZoneType>("chili");
+  const [activeCategory, setActiveCategory] = useState<string>("chili");
   const router = useRouter();
 
-  const handleZonePress = (zoneName: string) => {
-    router.push(`/plants/zone/${zoneName}`);
+  // Get active zones based on selected category
+  const activeZones =
+    mockZoneCategories.find((category) => category.id === activeCategory)
+      ?.zones || [];
+
+  // Event handlers
+  const handleAlertPress = (alert: Alert) => {
+    // Navigate to specific alert or related zone/plant
+    if (alert.zoneId) {
+      router.push(`/plants/zone/${alert.zoneId}`);
+    }
+  };
+
+  const handleAlertDismiss = (alert: Alert) => {
+    // In a real app, this would remove the alert from state/database
+    console.log("Dismissing alert:", alert.id);
+  };
+
+  const handleZonePress = (zone: Zone) => {
+    router.push(`/plants/zone/${zone.name}`);
+  };
+
+  const handleCategoryChange = (categoryId: string) => {
+    setActiveCategory(categoryId);
   };
 
   return (
     <View style={styles.container}>
       <Header title="My Plants" showSearch={true} showProfile={true} />
 
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Alerts Section */}
-        <View style={styles.alertsSection}>
-          <Text style={styles.sectionTitle}>Alerts</Text>
-          {alerts.map((alert, idx) => (
-            <View
-              key={idx}
-              style={[styles.alertBox, { backgroundColor: alert.color + "20" }]}
-            >
-              <View style={styles.alertContent}>
-                <Ionicons
-                  name={alert.icon}
-                  size={24}
-                  color={alert.color}
-                  style={styles.alertIcon}
-                />
-                <Text style={styles.alertText}>{alert.text}</Text>
-              </View>
-              <TouchableOpacity style={styles.alertAction}>
-                <Text style={styles.alertActionText}>View</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
+        <AlertsList
+          alerts={mockAlerts}
+          onAlertPress={handleAlertPress}
+          onAlertDismiss={handleAlertDismiss}
+          maxItems={3} // Show max 3 alerts on home page
+        />
 
-        {/* Zone Tabs */}
-        <View style={styles.zoneTabs}>
-          <TouchableOpacity
-            style={[
-              styles.zoneTab,
-              activeTab === "chili" && styles.activeZoneTab,
-            ]}
-            onPress={() => setActiveTab("chili")}
-          >
-            <Text
-              style={[
-                styles.zoneTabText,
-                activeTab === "chili" && styles.activeZoneTabText,
-              ]}
-            >
-              Chili Trees
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.zoneTab,
-              activeTab === "eggplant" && styles.activeZoneTab,
-            ]}
-            onPress={() => setActiveTab("eggplant")}
-          >
-            <Text
-              style={[
-                styles.zoneTabText,
-                activeTab === "eggplant" && styles.activeZoneTabText,
-              ]}
-            >
-              Eggplant Trees
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* Zone Category Tabs */}
+        <ZoneTabNavigation
+          categories={mockZoneCategories}
+          activeCategory={activeCategory}
+          onCategoryChange={handleCategoryChange}
+        />
 
         {/* Zones Grid */}
-        <View style={styles.zonesContainer}>
-          {zones[activeTab].map((zone: Zone, idx: number) => (
-            <TouchableOpacity
-              key={idx}
-              style={styles.zoneCard}
-              onPress={() => handleZonePress(zone.name)}
-            >
-              <View style={styles.zoneHeader}>
-                <Text style={styles.zoneIcon}>{zone.icon}</Text>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    {
-                      backgroundColor:
-                        zone.status === "Optimal" ? "#4CAF50" : "#FF5252",
-                    },
-                  ]}
-                >
-                  <Text style={styles.statusText}>{zone.status}</Text>
-                </View>
-              </View>
-              <Text style={styles.zoneName}>{zone.name}</Text>
-              <View style={styles.zoneStats}>
-                <View style={styles.statItem}>
-                  <Ionicons name="water-outline" size={20} color="#45aaf2" />
-                  <Text style={styles.statValue}>75%</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Ionicons name="sunny-outline" size={20} color="#f7b731" />
-                  <Text style={styles.statValue}>65%</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <ZoneGrid
+          zones={activeZones}
+          onZonePress={handleZonePress}
+          numColumns={2}
+          cardSize="medium"
+          showStats={true}
+        />
       </ScrollView>
     </View>
   );
@@ -169,136 +85,5 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-  },
-  alertsSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#174d3c",
-    marginBottom: 12,
-  },
-  alertBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  alertContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  alertIcon: {
-    marginRight: 12,
-  },
-  alertText: {
-    fontSize: 15,
-    color: "#333",
-    fontWeight: "500",
-    flex: 1,
-  },
-  alertAction: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  alertActionText: {
-    color: "#174d3c",
-    fontWeight: "600",
-  },
-  zoneTabs: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  zoneTab: {
-    flex: 1,
-    backgroundColor: "#fff",
-    paddingVertical: 12,
-    marginHorizontal: 6,
-    borderRadius: 12,
-    alignItems: "center",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  activeZoneTab: {
-    backgroundColor: "#174d3c",
-  },
-  zoneTabText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#174d3c",
-  },
-  activeZoneTabText: {
-    color: "#fff",
-  },
-  zonesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-  },
-  zoneCard: {
-    width: "48%",
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-  },
-  zoneHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  zoneIcon: {
-    fontSize: 32,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  zoneName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 12,
-  },
-  zoneStats: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  statItem: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  statValue: {
-    marginLeft: 4,
-    fontSize: 14,
-    color: "#666",
-    fontWeight: "500",
   },
 });
