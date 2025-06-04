@@ -1,3 +1,4 @@
+// app/_layout.tsx - Updated with actuator override route
 import {
   DarkTheme,
   DefaultTheme,
@@ -27,8 +28,11 @@ function RootLayoutNav() {
         {/* Other Screens */}
         <Stack.Screen name="sensors/[sensor]" />
         <Stack.Screen name="plants/zone/[zone]" />
-        {/* Add the missing plant route */}
         <Stack.Screen name="plants/[plant]" />
+
+        {/* Actuator Screens */}
+        <Stack.Screen name="actuator" />
+
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />

@@ -1,7 +1,7 @@
-// app/plants/[plant].tsx - Correct PlantProfile component
+// app/plants/[plant].tsx - Updated PlantProfile component
 import React from "react";
-import { View, StyleSheet, ScrollView, Alert } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { View, StyleSheet, ScrollView } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import Header from "../../components/Header";
 
 // Import new components
@@ -17,30 +17,23 @@ import { getPlantDetails } from "../../data/plantDetails";
 
 export default function PlantProfile() {
   const { plant } = useLocalSearchParams();
+  const router = useRouter();
   const plantKey = typeof plant === "string" ? plant.trim().toUpperCase() : "";
   const data = getPlantDetails(plantKey);
 
-
-  // Handle actuator override
+  // Handle actuator override - navigate to actuator override page
   const handleActuatorPress = () => {
-    Alert.alert(
-      "Override Actuator",
-      "This will manually override the automatic controls. Are you sure?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
+    if (data) {
+      // Pass both zone and plant information to the actuator override page
+      router.push({
+        pathname: "/actuator/override",
+        params: {
+          zone: data.zone,
+          plant: data.name,
+          plantId: data.id,
         },
-        {
-          text: "Override",
-          style: "destructive",
-          onPress: () => {
-            // In a real app, this would trigger actuator override
-            Alert.alert("Success", "Actuator override activated");
-          },
-        },
-      ]
-    );
+      });
+    }
   };
 
   // Loading state (you could add actual loading logic here)
