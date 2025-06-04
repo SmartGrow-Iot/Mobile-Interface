@@ -32,34 +32,38 @@ export function PlantProfileCard({
     return require("../../../assets/logo/smartgrow.png");
   };
 
-  // Size configurations - increased for better visibility
+  // Size configurations - more compact for better balance
   const imageSize = {
-    small: 48,
-    medium: 80,
-    large: 100,
+    small: 50,
+    medium: 70,
+    large: 90,
   };
-
-  console.log("PlantProfileCard - Using local asset for:", image);
 
   return (
     <View style={cardStyle[size]}>
-      <Card variant="elevated">
+      <Card variant="elevated" style={styles.cardContainer}>
         <View style={styles.content}>
           {/* Local plant image */}
-          <Image
-            source={getImageSource()}
-            style={[
-              styles.plantImage,
-              {
-                width: imageSize[size],
-                height: imageSize[size],
-              },
-            ]}
-            resizeMode="contain"
-          />
+          <View style={styles.imageContainer}>
+            <Image
+              source={getImageSource()}
+              style={[
+                styles.plantImage,
+                {
+                  width: imageSize[size],
+                  height: imageSize[size],
+                },
+              ]}
+              resizeMode="contain"
+            />
+          </View>
 
           {/* Plant name */}
-          <Text style={[styles.plantName, styles[`${size}Name`]]}>{name}</Text>
+          <View style={styles.nameContainer}>
+            <Text style={[styles.plantName, styles[`${size}Name`]]}>
+              {name}
+            </Text>
+          </View>
         </View>
       </Card>
     </View>
@@ -72,12 +76,16 @@ const styles = StyleSheet.create({
     height: 140,
   },
   mediumCard: {
-    width: 160,
-    height: 200,
+    width: 150,
+    height: 180,
   },
   largeCard: {
-    width: 200,
-    height: 240,
+    width: 180,
+    height: 200,
+  },
+  cardContainer: {
+    height: "100%",
+    justifyContent: "center",
   },
   content: {
     alignItems: "center",
@@ -86,8 +94,19 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 12,
   },
+  imageContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
   plantImage: {
-    marginBottom: 16,
+    // Image dimensions are set dynamically above
+  },
+  nameContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 4,
   },
   plantName: {
     fontWeight: "bold",
@@ -100,11 +119,11 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   mediumName: {
-    fontSize: 16,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 18,
   },
   largeName: {
-    fontSize: 18,
-    lineHeight: 22,
+    fontSize: 16,
+    lineHeight: 20,
   },
 });
