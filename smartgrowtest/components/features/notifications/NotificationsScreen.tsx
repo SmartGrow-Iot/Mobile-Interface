@@ -12,10 +12,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useAuth } from "../../contexts/AuthContext";
-import { userService } from "../../services/userService";
-import { useNotifications } from "../../hooks/useNotifications";
-import Header from "../../components/Header";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/hooks/useNotifications";
+import { userService } from "@/services/userService";
+import Header from "@/components/Header";
 
 export default function ProfileScreen() {
   const { logout, user } = useAuth();

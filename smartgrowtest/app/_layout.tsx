@@ -1,4 +1,3 @@
-// app/_layout.tsx - Updated with loading state
 import {
   DarkTheme,
   DefaultTheme,
@@ -15,9 +14,8 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { loading } = useAuth(); // Add this line
+  const { loading } = useAuth();
 
-  // Add loading check
   if (loading) {
     return (
       <View
@@ -50,6 +48,9 @@ function RootLayoutNav() {
 
         {/* Actuator Screens */}
         <Stack.Screen name="actuator" />
+
+        {/* Notifications Screen */}
+        <Stack.Screen name="notifications" />
 
         <Stack.Screen name="+not-found" />
       </Stack>

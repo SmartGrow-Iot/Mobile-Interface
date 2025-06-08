@@ -1,3 +1,4 @@
+// components/Header.tsx - Complete Header with notification support
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -11,6 +12,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, usePathname } from "expo-router";
+import { useNotifications } from "../hooks/useNotifications";
+import { NotificationIcon } from "./features/notifications/NotificationIcon";
 
 type BreadcrumbItem = {
   label: string;
@@ -30,6 +33,7 @@ type HeaderProps = {
   showBackButton?: boolean;
   showSearch?: boolean;
   showProfile?: boolean;
+  showNotifications?: boolean; // New prop for notification icon
   breadcrumbs?: BreadcrumbItem[];
   customBreadcrumbs?: BreadcrumbItem[];
 };
@@ -253,11 +257,13 @@ export default function Header({
   showBackButton = false,
   showSearch = false,
   showProfile = false,
+  showNotifications = false, // Default false for backward compatibility
   breadcrumbs,
   customBreadcrumbs,
 }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { unreadCount } = useNotifications(); // Get unread notification count
 
   // Search state
   const [isSearchVisible, setIsSearchVisible] = useState(false);
@@ -279,6 +285,7 @@ export default function Header({
       profile: "Profile",
       plants: "Plants",
       zone: "Zone",
+      notifications: "Notifications",
       light: "Light Sensor",
       soil: "Soil Sensor",
       airquality: "Air Quality Sensor",
@@ -362,6 +369,10 @@ export default function Header({
     handleSearchClose();
   };
 
+  const handleNotificationsPress = () => {
+    router.push("/notifications");
+  };
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case "page":
@@ -428,6 +439,15 @@ export default function Header({
             >
               <Ionicons name="search" size={22} color="#174d3c" />
             </TouchableOpacity>
+          )}
+          {/* Notification Icon - NEW */}
+          {showNotifications && (
+            <NotificationIcon
+              unreadCount={unreadCount}
+              onPress={handleNotificationsPress}
+              iconColor="#174d3c"
+              iconSize={22}
+            />
           )}
           {showProfile && (
             <TouchableOpacity

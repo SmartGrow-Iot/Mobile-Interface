@@ -1,4 +1,3 @@
-// services/api.js
 import { auth } from "../config/firebaseConfig";
 
 const API_BASE_URL = "https://test-server-owq2.onrender.com/api/v1";
