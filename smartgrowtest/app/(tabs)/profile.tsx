@@ -394,7 +394,7 @@ export default function ProfileScreen() {
             {/* New Zone Field */}
             <TextInput
               style={styles.inputModern}
-              placeholder="Zone (e.g., Zone A, Zone B)"
+              placeholder="Zone (e.g., Zone 1, Zone 2)"
               value={zone}
               onChangeText={setZone}
               placeholderTextColor="#aaa"
