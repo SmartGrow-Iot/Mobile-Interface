@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,142 +9,163 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Header from "../../../components/Header"; // Import Header component
+import { apiRequest } from "@/services/api";
+import { PlantDetail } from "@/types/Plant";
 
 type Plant = {
-  id: string;
+  plantId: string;
   name: string;
-  status: "Optimal" | "Critical";
+  status: 'optimal' | 'critical';
   waterLevel: number;
   lightLevel: number;
+  // Add other fields if you want them
 };
 
-const plants: Record<string, Plant[]> = {
-  "Zone A": [
-    {
-      id: "CP-1",
-      name: "Chili Plant 1",
-      status: "Optimal",
-      waterLevel: 75,
-      lightLevel: 65,
-    },
-    {
-      id: "CP-2",
-      name: "Chili Plant 2",
-      status: "Optimal",
-      waterLevel: 80,
-      lightLevel: 70,
-    },
-    {
-      id: "CP-3",
-      name: "Chili Plant 3",
-      status: "Critical",
-      waterLevel: 45,
-      lightLevel: 85,
-    },
-    {
-      id: "CP-4",
-      name: "Chili Plant 4",
-      status: "Optimal",
-      waterLevel: 78,
-      lightLevel: 68,
-    },
-  ],
-  "Zone B": [
-    {
-      id: "CP-5",
-      name: "Chili Plant 5",
-      status: "Critical",
-      waterLevel: 40,
-      lightLevel: 90,
-    },
-    {
-      id: "CP-6",
-      name: "Chili Plant 6",
-      status: "Optimal",
-      waterLevel: 82,
-      lightLevel: 72,
-    },
-    {
-      id: "CP-7",
-      name: "Chili Plant 7",
-      status: "Optimal",
-      waterLevel: 76,
-      lightLevel: 67,
-    },
-    {
-      id: "CP-8",
-      name: "Chili Plant 8",
-      status: "Optimal",
-      waterLevel: 79,
-      lightLevel: 69,
-    },
-  ],
-  "Zone C": [
-    {
-      id: "EP-1",
-      name: "Eggplant 1",
-      status: "Optimal",
-      waterLevel: 77,
-      lightLevel: 66,
-    },
-    {
-      id: "EP-2",
-      name: "Eggplant 2",
-      status: "Optimal",
-      waterLevel: 81,
-      lightLevel: 71,
-    },
-    {
-      id: "EP-3",
-      name: "Eggplant 3",
-      status: "Optimal",
-      waterLevel: 74,
-      lightLevel: 64,
-    },
-    {
-      id: "EP-4",
-      name: "Eggplant 4",
-      status: "Optimal",
-      waterLevel: 83,
-      lightLevel: 73,
-    },
-  ],
-  "Zone D": [
-    {
-      id: "EP-5",
-      name: "Eggplant 5",
-      status: "Optimal",
-      waterLevel: 76,
-      lightLevel: 65,
-    },
-    {
-      id: "EP-6",
-      name: "Eggplant 6",
-      status: "Optimal",
-      waterLevel: 79,
-      lightLevel: 68,
-    },
-    {
-      id: "EP-7",
-      name: "Eggplant 7",
-      status: "Optimal",
-      waterLevel: 78,
-      lightLevel: 67,
-    },
-    {
-      id: "EP-8",
-      name: "Eggplant 8",
-      status: "Optimal",
-      waterLevel: 80,
-      lightLevel: 70,
-    },
-  ],
-};
+// const plants: Record<string, Plant[]> = {
+//   "Zone A": [
+//     {
+//       id: "CP-1",
+//       name: "Chili Plant 1",
+//       status: "Optimal",
+//       waterLevel: 75,
+//       lightLevel: 65,
+//     },
+//     {
+//       id: "CP-2",
+//       name: "Chili Plant 2",
+//       status: "Optimal",
+//       waterLevel: 80,
+//       lightLevel: 70,
+//     },
+//     {
+//       id: "CP-3",
+//       name: "Chili Plant 3",
+//       status: "Critical",
+//       waterLevel: 45,
+//       lightLevel: 85,
+//     },
+//     {
+//       id: "CP-4",
+//       name: "Chili Plant 4",
+//       status: "Optimal",
+//       waterLevel: 78,
+//       lightLevel: 68,
+//     },
+//   ],
+//   "Zone B": [
+//     {
+//       id: "CP-5",
+//       name: "Chili Plant 5",
+//       status: "Critical",
+//       waterLevel: 40,
+//       lightLevel: 90,
+//     },
+//     {
+//       id: "CP-6",
+//       name: "Chili Plant 6",
+//       status: "Optimal",
+//       waterLevel: 82,
+//       lightLevel: 72,
+//     },
+//     {
+//       id: "CP-7",
+//       name: "Chili Plant 7",
+//       status: "Optimal",
+//       waterLevel: 76,
+//       lightLevel: 67,
+//     },
+//     {
+//       id: "CP-8",
+//       name: "Chili Plant 8",
+//       status: "Optimal",
+//       waterLevel: 79,
+//       lightLevel: 69,
+//     },
+//   ],
+//   "Zone C": [
+//     {
+//       id: "EP-1",
+//       name: "Eggplant 1",
+//       status: "Optimal",
+//       waterLevel: 77,
+//       lightLevel: 66,
+//     },
+//     {
+//       id: "EP-2",
+//       name: "Eggplant 2",
+//       status: "Optimal",
+//       waterLevel: 81,
+//       lightLevel: 71,
+//     },
+//     {
+//       id: "EP-3",
+//       name: "Eggplant 3",
+//       status: "Optimal",
+//       waterLevel: 74,
+//       lightLevel: 64,
+//     },
+//     {
+//       id: "EP-4",
+//       name: "Eggplant 4",
+//       status: "Optimal",
+//       waterLevel: 83,
+//       lightLevel: 73,
+//     },
+//   ],
+//   "Zone D": [
+//     {
+//       id: "EP-5",
+//       name: "Eggplant 5",
+//       status: "Optimal",
+//       waterLevel: 76,
+//       lightLevel: 65,
+//     },
+//     {
+//       id: "EP-6",
+//       name: "Eggplant 6",
+//       status: "Optimal",
+//       waterLevel: 79,
+//       lightLevel: 68,
+//     },
+//     {
+//       id: "EP-7",
+//       name: "Eggplant 7",
+//       status: "Optimal",
+//       waterLevel: 78,
+//       lightLevel: 67,
+//     },
+//     {
+//       id: "EP-8",
+//       name: "Eggplant 8",
+//       status: "Optimal",
+//       waterLevel: 80,
+//       lightLevel: 70,
+//     },
+//   ],
+// };
 
 export default function ZoneScreen() {
   const { zone } = useLocalSearchParams();
+  console.log(zone)
   const router = useRouter();
-  const zonePlants = plants[zone as string] || [];
+  const [zonePlants, setZonePlants] = useState<PlantDetail[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPlants = async () => {
+      try {
+        setLoading(true);
+        const response = await apiRequest(`/zones/${zone}/plants`);
+        const plants = response?.plants || [];
+        setZonePlants(plants);
+      } catch (error) {
+        console.error('Error fetching plants:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPlants();
+  }, [zone]);
 
   const handlePlantPress = (plantId: string) => {
     router.push(`/plants/${plantId}`);
@@ -172,18 +193,18 @@ export default function ZoneScreen() {
       >
         {zonePlants.map((plant) => (
           <TouchableOpacity
-            key={plant.id}
+            key={plant.plantId}
             style={styles.plantCard}
-            onPress={() => handlePlantPress(plant.id)}
+            onPress={() => handlePlantPress(plant.plantId)}
           >
             <View style={styles.plantHeader}>
-              <Text style={styles.plantId}>{plant.id}</Text>
+              <Text style={styles.plantId}>{plant.name}</Text>
               <View
                 style={[
                   styles.statusBadge,
                   {
                     backgroundColor:
-                      plant.status === "Optimal" ? "#4CAF50" : "#FF5252",
+                      plant.status === "optimal" ? "#4CAF50" : "#FF5252",
                   },
                 ]}
               >

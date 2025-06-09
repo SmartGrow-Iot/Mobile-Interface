@@ -14,7 +14,7 @@ export type PlantReading = {
 };
 
 export type PlantDetail = {
-  id: string;
+  plantId: string;
   name: string;
   image: string;
   zone: string;
@@ -25,6 +25,7 @@ export type PlantDetail = {
   type: string;
   growthTime: string;
   notes: string;
+  description: string;
   thresholds: PlantThreshold[];
   actuator: string;
   readings: PlantReading[];

@@ -4,7 +4,7 @@ import { Zone, ZoneCategory } from "../types/Zone";
 export const mockZones: Record<string, Zone[]> = {
   chili: [
     {
-      id: "zone-a",
+      id: "zone1",
       name: "Zone A",
       icon: "🌶️",
       status: "Critical",
@@ -17,7 +17,7 @@ export const mockZones: Record<string, Zone[]> = {
       lastUpdated: new Date(),
     },
     {
-      id: "zone-b",
+      id: "zone2",
       name: "Zone B",
       icon: "🌶️",
       status: "Critical",
@@ -32,7 +32,7 @@ export const mockZones: Record<string, Zone[]> = {
   ],
   eggplant: [
     {
-      id: "zone-c",
+      id: "zone3",
       name: "Zone C",
       icon: "🍆",
       status: "Optimal",
@@ -45,7 +45,7 @@ export const mockZones: Record<string, Zone[]> = {
       lastUpdated: new Date(),
     },
     {
-      id: "zone-d",
+      id: "zone4",
       name: "Zone D",
       icon: "🍆",
       status: "Optimal",
