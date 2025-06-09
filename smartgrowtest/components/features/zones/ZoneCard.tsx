@@ -79,6 +79,15 @@ export function ZoneCard({
               label="Light"
               size={size === "large" ? "medium" : "small"}
             />
+            {zone.humidity && (
+              <StatItem
+                icon="water-outline"
+                iconColor="#5dade2"
+                value={`${zone.humidity}%`}
+                label="Humidity"
+                size={size === "large" ? "medium" : "small"}
+              />
+            )}
             {zone.temperature && (
               <StatItem
                 icon="thermometer-outline"
