@@ -27,4 +27,5 @@ export type GroupData = {
   critical: boolean;
   zone?: string;
   lastUpdated?: Date;
+  esp32Id?: string;
 };

@@ -147,7 +147,7 @@ export default function PlantProfile() {
     );
   }
 
-  // Custom breadcrumbs for plant profile page
+  // Custom breadcrumbs for details page
   const customBreadcrumbs = [
     { label: "Home", route: "/" },
     { label: 'A', route: `/plants/zone/A` },
@@ -158,7 +158,7 @@ export default function PlantProfile() {
     <View style={styles.container}>
       {/* Header Component */}
       <Header
-        title="Plant Profile"
+        title="Plant Details"
         showBackButton={true}
         customBreadcrumbs={customBreadcrumbs}
       />

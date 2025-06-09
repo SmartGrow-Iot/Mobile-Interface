@@ -34,7 +34,7 @@ export default function SensorDetail() {
       `${group.group} Details`,
       `Zone: ${group.zone}\nValue: ${group.value}\nStatus: ${
         group.critical ? "Critical" : "Normal"
-      }`,
+      }\nESP32 ID: ${group.esp32Id || "N/A"}`,
       [
         {
           text: "View Zone",

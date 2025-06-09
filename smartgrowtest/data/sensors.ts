@@ -59,6 +59,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone C",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g2",
@@ -68,6 +69,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone A",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g3",
@@ -77,6 +79,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone C",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g4",
@@ -86,6 +89,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: true,
       zone: "Zone D",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g5",
@@ -95,6 +99,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone B",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g6",
@@ -104,6 +109,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone B",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g7",
@@ -113,6 +119,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: true,
       zone: "Zone A",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g8",
@@ -122,6 +129,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone D",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g9",
@@ -131,6 +139,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: true,
       zone: "Zone A",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_003",
     },
     {
       id: "g10",
@@ -140,6 +149,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone C",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_003",
     },
   ],
   soil: [
@@ -151,6 +161,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone C",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g2",
@@ -160,6 +171,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone A",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g3",
@@ -169,6 +181,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone C",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g4",
@@ -178,6 +191,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: true,
       zone: "Zone D",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g5",
@@ -187,6 +201,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone B",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g6",
@@ -196,6 +211,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone B",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g7",
@@ -205,6 +221,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone A",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g8",
@@ -214,6 +231,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone D",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g9",
@@ -223,6 +241,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: true,
       zone: "Zone A",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_003",
     },
     {
       id: "g10",
@@ -232,6 +251,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone C",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_003",
     },
   ],
   airquality: [
@@ -243,6 +263,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone C",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g2",
@@ -252,6 +273,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone A",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g3",
@@ -261,6 +283,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone C",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g4",
@@ -270,6 +293,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: true,
       zone: "Zone D",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g5",
@@ -279,6 +303,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone B",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g6",
@@ -288,6 +313,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone B",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g7",
@@ -297,6 +323,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone A",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g8",
@@ -306,6 +333,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone D",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g9",
@@ -315,6 +343,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: true,
       zone: "Zone A",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_003",
     },
     {
       id: "g10",
@@ -324,6 +353,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone C",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_003",
     },
   ],
   temperature: [
@@ -335,6 +365,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone C",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g2",
@@ -344,6 +375,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone A",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g3",
@@ -353,6 +385,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone C",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g4",
@@ -362,6 +395,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: true,
       zone: "Zone D",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g5",
@@ -371,6 +405,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone B",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g6",
@@ -380,6 +415,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone B",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g7",
@@ -389,6 +425,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone A",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g8",
@@ -398,6 +435,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone D",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g9",
@@ -407,6 +445,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: true,
       zone: "Zone A",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_003",
     },
     {
       id: "g10",
@@ -416,6 +455,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone C",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_003",
     },
   ],
   humidity: [
@@ -427,6 +467,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone C",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g2",
@@ -436,6 +477,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone A",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g3",
@@ -445,6 +487,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone C",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g4",
@@ -454,6 +497,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: true,
       zone: "Zone D",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_001",
     },
     {
       id: "g5",
@@ -463,6 +507,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone B",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g6",
@@ -472,6 +517,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone B",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g7",
@@ -481,6 +527,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone A",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g8",
@@ -490,6 +537,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone D",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_002",
     },
     {
       id: "g9",
@@ -499,6 +547,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: true,
       zone: "Zone A",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_003",
     },
     {
       id: "g10",
@@ -508,6 +557,7 @@ export const mockGroupData: Record<string, GroupData[]> = {
       critical: false,
       zone: "Zone C",
       lastUpdated: new Date(),
+      esp32Id: "ESP32_003",
     },
   ],
 };

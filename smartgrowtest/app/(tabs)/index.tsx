@@ -65,12 +65,12 @@ export default function HomePage() {
           onCategoryChange={handleCategoryChange}
         />
 
-        {/* Zones Grid */}
+        {/* Zones Grid - Updated for vertical layout */}
         <ZoneGrid
           zones={activeZones}
           onZonePress={handleZonePress}
-          numColumns={2}
-          cardSize="medium"
+          numColumns={1}
+          cardSize="large"
           showStats={true}
         />
       </ScrollView>

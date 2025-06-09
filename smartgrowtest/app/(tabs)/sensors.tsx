@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import Header from "../../components/Header"; // Adjust path as needed
+import Header from "../../components/Header"; 
 
 const sensors = [
   { label: "Light Sensor", icon: "☀️", route: "light" },

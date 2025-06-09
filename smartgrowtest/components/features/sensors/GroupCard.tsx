@@ -9,12 +9,14 @@ type GroupCardProps = {
   group: GroupData;
   onPress?: (group: GroupData) => void;
   showZone?: boolean;
+  showEsp32Id?: boolean;
 };
 
 export function GroupCard({
   group,
   onPress,
   showZone = false,
+  showEsp32Id = true,
 }: GroupCardProps) {
   return (
     <TouchableOpacity onPress={() => onPress?.(group)} activeOpacity={0.7}>
@@ -26,6 +28,9 @@ export function GroupCard({
             <Text style={styles.groupName}>{group.group}</Text>
             {showZone && group.zone && (
               <Text style={styles.zoneText}>{group.zone}</Text>
+            )}
+            {showEsp32Id && group.esp32Id && (
+              <Text style={styles.esp32Text}>ESP32: {group.esp32Id}</Text>
             )}
           </View>
 
@@ -81,6 +86,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
     marginTop: 2,
+  },
+  esp32Text: {
+    fontSize: 11,
+    color: "#888",
+    marginTop: 2,
+    fontFamily: "monospace",
   },
   valueContainer: {
     alignItems: "flex-end",
