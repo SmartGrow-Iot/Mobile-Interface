@@ -38,7 +38,7 @@ export default function HomePage() {
   };
 
   const handleZonePress = (zone: Zone) => {
-    router.push(`/plants/zone/${zone.name}`);
+    router.push(`/plants/zone/${zone.id}`);
   };
 
   const handleCategoryChange = (categoryId: string) => {

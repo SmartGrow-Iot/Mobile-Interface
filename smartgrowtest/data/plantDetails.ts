@@ -1,4 +1,7 @@
+import React, { useState, useEffect } from "react";
 import { PlantDetail } from "../types/Plant";
+import { apiRequest } from "@/services/api";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 export const mockPlantDetails: Record<string, PlantDetail> = {
   // Chili Plants - Zone A
@@ -566,8 +569,8 @@ export const mockPlantDetails: Record<string, PlantDetail> = {
       { label: "Wind", value: "5 m/s" },
     ],
   },
-  "EP-8": {
-    id: "EP-8",
+  "plant_iKjnBJcBaGTx6LyCXUy2": {
+    id: "plant_iKjnBJcBaGTx6LyCXUy2",
     name: "Eggplant 8",
     image: "🍆",
     zone: "Zone D",
@@ -607,5 +610,5 @@ export const mockPlantDetails: Record<string, PlantDetail> = {
 
 // Helper function to get plant details
 export const getPlantDetails = (plantId: string): PlantDetail | undefined => {
-  return mockPlantDetails[plantId.trim().toUpperCase()];
+  return mockPlantDetails[plantId.trim()];
 };
