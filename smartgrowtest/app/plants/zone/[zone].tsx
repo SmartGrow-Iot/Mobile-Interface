@@ -155,7 +155,9 @@ export default function ZoneScreen() {
     const fetchPlants = async () => {
       try {
         setLoading(true);
+        console.log('Fetching plants for zone: ', zone)
         const response = await apiRequest(`/zones/${zone}/plants`);
+        console.log('Fetched Plants: ', response)
         const plants = response?.plants || [];
         setZonePlants(plants);
       } catch (error) {

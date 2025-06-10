@@ -30,6 +30,13 @@ export default function SensorDetail() {
 
   // Handle group press
   const handleGroupPress = (group: GroupData) => {
+    // added mapping to transform zone name to fit the zone endpoint param
+    const zoneMapping: { [key: string]: string } = {
+      "Zone A": "zone1",
+      "Zone B": "zone2",
+      "Zone C": "zone3",
+      "Zone D": "zone4",
+    }
     Alert.alert(
       `${group.group} Details`,
       `Zone: ${group.zone}\nValue: ${group.value}\nStatus: ${
@@ -40,7 +47,9 @@ export default function SensorDetail() {
           text: "View Zone",
           onPress: () => {
             if (group.zone) {
-              router.push(`/plants/zone/${group.zone}`);
+              const zone = zoneMapping[group.zone] || group.zone;
+              console.log(`Navigating to zone: ${group.zone}`);
+              router.push(`/plants/zone/${zone}`);
             }
           },
         },
