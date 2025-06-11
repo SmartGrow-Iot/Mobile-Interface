@@ -18,9 +18,9 @@ import { Card } from "../../components/ui/Card";
 type ThresholdType = "watering" | "wind" | "light";
 
 type ThresholdSettings = {
-  watering: { value: string; unit: string };
-  wind: { value: string; unit: string };
-  light: { value: string; unit: string };
+  watering: { value: string; unit: string[] };
+  wind: { value: string; unit: string[] };
+  light: { value: string; unit: string[] };
 };
 
 export default function ActuatorOverride() {
@@ -31,12 +31,18 @@ export default function ActuatorOverride() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedThreshold, setSelectedThreshold] =
     useState<ThresholdType | null>(null);
+  const [enableIndex, setEnableIndex] = useState(0);
+  const [selectedUnitIndex, setSelectedUnitIndex] = useState([0,0,0]);
+  const [selectedWateringUnitIndex, setSelectedWateringUnitIndex] = useState(0);
+  const [selectedWindUnitIndex, setSelectedWindUnitIndex] = useState(0);
+  const [selectedLightUnitIndex, setSelectedLightUnitIndex] = useState(0);
+
 
   // Threshold values
   const [thresholds, setThresholds] = useState<ThresholdSettings>({
-    watering: { value: "200", unit: "ml" },
-    wind: { value: "100", unit: "s" },
-    light: { value: "100", unit: "s" },
+    watering: { value: "200", unit: ["ml", "%", "%"] },
+    wind: { value: "100", unit: ["s", "%", "%", "%", "%"] },
+    light: { value: "100", unit: ["s", "%", "%"] },
   });
 
   // Input state for modal
@@ -54,6 +60,7 @@ export default function ActuatorOverride() {
       icon: "water-outline" as const,
       color: "#45aaf2",
       backgroundColor: "#e3f2fd",
+      index: 0,
     },
     {
       type: "wind" as ThresholdType,
@@ -61,6 +68,7 @@ export default function ActuatorOverride() {
       icon: "leaf-outline" as const,
       color: "#4caf50",
       backgroundColor: "#e8f5e9",
+      index: 1,
     },
     {
       type: "light" as ThresholdType,
@@ -68,11 +76,13 @@ export default function ActuatorOverride() {
       icon: "sunny-outline" as const,
       color: "#ff9800",
       backgroundColor: "#fff3e0",
+      index: 2,
     },
   ];
 
   // Handle actuator button press
   const handleActuatorPress = (type: ThresholdType) => {
+    setEnableIndex(0)
     setSelectedThreshold(type);
     setInputValue(thresholds[type].value);
     setModalVisible(true);
@@ -83,45 +93,79 @@ export default function ActuatorOverride() {
     if (!selectedThreshold) return;
 
     switch (option) {
-      case "duration":
-        // For wind and light - set by duration
+      case "wind_duration":
+        // For wind - set by duration
+        if(enableIndex!=0){setEnableIndex(0);return;}
         handleSaveThreshold();
+        setSelectedUnitIndex([selectedUnitIndex[0],0,selectedUnitIndex[2]]) // save unit for watering, wind, light.
+        break;
+      case "light_duration":
+        // For light - set by duration
+        if(enableIndex!=0){setEnableIndex(0);return;}
+        handleSaveThreshold();
+        setSelectedUnitIndex([selectedUnitIndex[0],selectedUnitIndex[1],0]) // save unit for watering, wind, light.
         break;
       case "volume":
         // For watering - set by volume
+        if(enableIndex!=0){setEnableIndex(0);return;}
         handleSaveThreshold();
+        setSelectedUnitIndex([0,selectedUnitIndex[1],selectedUnitIndex[2]]) // save unit for watering, wind, light.
         break;
-      case "current_co2":
+      case "co2":
         // Set by current CO2 level
-        setInputValue("420"); // Example current CO2 level
+        if(enableIndex!=1){setEnableIndex(1);return;}
+        // setInputValue("420"); // Example current CO2 level
+        handleSaveThreshold();
+        setSelectedUnitIndex([selectedUnitIndex[0], 1, selectedUnitIndex[2]])
         break;
-      case "current_humidity":
+      case "humidity":
         // Set by current humidity
-        setInputValue("60"); // Example current humidity
+        if(enableIndex!=2){setEnableIndex(2);return;}
+        // setInputValue("60"); // Example current humidity
+        handleSaveThreshold();
+        setSelectedUnitIndex([selectedUnitIndex[0], 2, selectedUnitIndex[2]])
         break;
-      case "current_light":
+      case "light_intensity":
         // Set by current light intensity
-        setInputValue("70"); // Example current light level
+        if(enableIndex!=1){setEnableIndex(1);return;}
+        // setInputValue("70"); // Example current light level
+        handleSaveThreshold();
+        setSelectedUnitIndex([selectedUnitIndex[0], selectedUnitIndex[1], 1])
         break;
       case "humidity_range":
         // Set by humidity range
-        Alert.alert("Humidity Range", "Set min and max humidity values");
+        if(enableIndex!=3){setEnableIndex(3);return;}
+        // Alert.alert("Humidity Range", "Set min and max humidity values");
+        handleSaveThreshold();
+        setSelectedUnitIndex([selectedUnitIndex[0], 3, selectedUnitIndex[2]])
         break;
       case "co2_range":
         // Set by CO2 range
-        Alert.alert("CO2 Range", "Set min and max CO2 values");
+        if(enableIndex!=4){setEnableIndex(4);return;}
+        // Alert.alert("CO2 Range", "Set min and max CO2 values");
+        handleSaveThreshold();
+        setSelectedUnitIndex([selectedUnitIndex[0], 4, selectedUnitIndex[2]])
         break;
       case "light_range":
+        if(enableIndex!=2){setEnableIndex(2);return;}
         // Set by light intensity range
-        Alert.alert("Light Range", "Set min and max light intensity values");
+        // Alert.alert("Light Range", "Set min and max light intensity values");
+        handleSaveThreshold();
+        setSelectedUnitIndex([selectedUnitIndex[0], selectedUnitIndex[1], 2])
         break;
-      case "current_moisture":
+      case "moisture":
         // Set by current moisture
-        setInputValue("40"); // Example current moisture
+        if(enableIndex!=1){setEnableIndex(1);return;}
+        // setInputValue("40"); // Example current moisture
+        handleSaveThreshold();
+        setSelectedUnitIndex([1, selectedUnitIndex[1], selectedUnitIndex[2]])
         break;
       case "moisture_range":
         // Set by moisture range
-        Alert.alert("Moisture Range", "Set min and max moisture values");
+        if(enableIndex!=2){setEnableIndex(2);return;}
+        // Alert.alert("Moisture Range", "Set min and max moisture values");
+        handleSaveThreshold();
+        setSelectedUnitIndex([2, selectedUnitIndex[1], selectedUnitIndex[2]])
         break;
     }
   };
@@ -145,7 +189,7 @@ export default function ActuatorOverride() {
       "Success",
       `${
         selectedThreshold.charAt(0).toUpperCase() + selectedThreshold.slice(1)
-      } threshold updated to ${inputValue}${thresholds[selectedThreshold].unit}`
+      } threshold updated to ${inputValue}${thresholds[selectedThreshold].unit[enableIndex]} [STARTING OVERRIDE!]`
     );
 
     setModalVisible(false);
@@ -166,21 +210,21 @@ export default function ActuatorOverride() {
       case "watering":
         return [
           { key: "volume", label: "Set by volume", primary: true },
-          { key: "current_moisture", label: "Set by current moisture" },
+          { key: "moisture", label: "Set by moisture" },
           { key: "moisture_range", label: "Set by moisture range (min - max)" },
         ];
       case "wind":
         return [
-          { key: "duration", label: "Set by duration", primary: true },
-          { key: "current_co2", label: "Set by current CO2 level" },
-          { key: "current_humidity", label: "Set by current humidity" },
+          { key: "wind_duration", label: "Set by duration", primary: true },
+          { key: "co2", label: "Set by CO2 level" },
+          { key: "humidity", label: "Set by humidity" },
           { key: "humidity_range", label: "Set by humidity range (min - max)" },
           { key: "co2_range", label: "Set by CO2 level range (min - max)" },
         ];
       case "light":
         return [
-          { key: "duration", label: "Set by current duration", primary: true },
-          { key: "current_light", label: "Set by current light intensity" },
+          { key: "light_duration", label: "Set by duration", primary: true },
+          { key: "light_intensity", label: "Set by light intensity" },
           {
             key: "light_range",
             label: "Set by light intensity range (min - max)",
@@ -282,7 +326,6 @@ export default function ActuatorOverride() {
                 styles.actuatorButton,
                 { backgroundColor: config.backgroundColor },
               ]}
-              onPress={() => handleActuatorPress(config.type)}
               activeOpacity={0.7}
             >
               <View
@@ -297,20 +340,20 @@ export default function ActuatorOverride() {
                 <Text style={styles.actuatorTitle}>{config.title}</Text>
                 <Text style={styles.actuatorSubtitle}>
                   {config.type === "watering"
-                    ? "Watering Threshold: "
+                    ? "Watering Amount: "
                     : config.type === "wind"
-                    ? "Wind Threshold: "
-                    : "Light Threshold: "}
+                    ? "Wind Amount: "
+                    : "Light Amount: "}
                   <Text style={styles.thresholdValue}>
                     {thresholds[config.type].value}
-                    {thresholds[config.type].unit}
+                    {thresholds[config.type].unit[selectedUnitIndex[config.index]]}
                   </Text>
                 </Text>
                 <TouchableOpacity
                   style={styles.adjustButton}
                   onPress={() => handleActuatorPress(config.type)}
                 >
-                  <Text style={styles.adjustButtonText}>Adjust threshold</Text>
+                  <Text style={styles.adjustButtonText}>Start Override</Text>
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
@@ -328,7 +371,7 @@ export default function ActuatorOverride() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Threshold setting</Text>
+              <Text style={styles.modalTitle}>Override setting</Text>
               <TouchableOpacity onPress={handleCancel}>
                 <Ionicons name="close" size={24} color="#666" />
               </TouchableOpacity>
@@ -339,10 +382,10 @@ export default function ActuatorOverride() {
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>
                   {selectedThreshold === "watering"
-                    ? "Watering threshold:"
+                    ? "Watering amount:"
                     : selectedThreshold === "wind"
-                    ? "Wind threshold:"
-                    : "Light threshold:"}
+                    ? "Wind amount:"
+                    : "Light amount:"}
                 </Text>
                 <View style={styles.inputWrapper}>
                   <TextInput
@@ -354,7 +397,7 @@ export default function ActuatorOverride() {
                   />
                   <Text style={styles.unitLabel}>
                     {selectedThreshold
-                      ? thresholds[selectedThreshold].unit
+                      ? thresholds[selectedThreshold].unit[enableIndex]
                       : ""}
                   </Text>
                 </View>
@@ -367,14 +410,14 @@ export default function ActuatorOverride() {
                     key={option.key}
                     style={[
                       styles.optionButton,
-                      option.primary && styles.primaryOptionButton,
+                      index == enableIndex && styles.primaryOptionButton,
                     ]}
                     onPress={() => handleThresholdOption(option.key)}
                   >
                     <Text
                       style={[
                         styles.optionButtonText,
-                        option.primary && styles.primaryOptionButtonText,
+                        index == enableIndex && styles.primaryOptionButtonText,
                       ]}
                     >
                       {option.label}
