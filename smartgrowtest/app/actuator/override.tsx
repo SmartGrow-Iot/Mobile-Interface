@@ -194,7 +194,7 @@ export default function ActuatorOverride() {
       },
     }));
 
-    const actuatorInvolved = 
+    const actuatorCalledInAPI = 
     selectedThreshold === "watering"
       ? "water"
       : selectedThreshold === "fan"
@@ -203,11 +203,20 @@ export default function ActuatorOverride() {
       ? "light"
       : "invalid actuator"
 
+      const actuatorActionToDoInAPI = 
+      selectedThreshold === "watering"
+      ? "watering"
+      : selectedThreshold === "fan"
+      ? "fan_on"
+      : selectedThreshold === "light"
+      ? "light_on"
+      : "invalid actuator"
+
     try {      
       console.log('Try to water: ', zone)
 
       const payload = {
-        action: selectedThreshold, // e.g., "watering"
+        action: actuatorActionToDoInAPI, // e.g., "watering"
         actuatorId: "actuator-123", // Replace with actual actuator ID
         plantId: plant,
         amount: parseFloat(inputValue),
@@ -218,7 +227,7 @@ export default function ActuatorOverride() {
 
       console.log("Payload to be sent:", payload);
 
-      const response = await apiRequest(`/logs/action/${actuatorInvolved}`, {
+      const response = await apiRequest(`/logs/action/${actuatorCalledInAPI}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
