@@ -1,5 +1,5 @@
 // app/actuator/override.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,34 +14,43 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Header from "../../components/Header";
 import { Card } from "../../components/ui/Card";
+import { apiRequest } from "@/services/api";
 
-type ThresholdType = "watering" | "wind" | "light";
+type ThresholdType = "watering" | "fan" | "light";
 
 type ThresholdSettings = {
   watering: { value: string; unit: string[] };
-  wind: { value: string; unit: string[] };
+  fan: { value: string; unit: string[] };
   light: { value: string; unit: string[] };
 };
 
 export default function ActuatorOverride() {
-  const router = useRouter();
   const { zone, plant, plantId } = useLocalSearchParams();
+  
+  // User Detail
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+        // TODO: Fetch User Detail
+      };
+      fetchUserInfo();
+    }, []); // Run once when screen is opened
+
 
   // Modal state
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedThreshold, setSelectedThreshold] =
     useState<ThresholdType | null>(null);
-  const [enableIndex, setEnableIndex] = useState(0);
-  const [selectedUnitIndex, setSelectedUnitIndex] = useState([0,0,0]);
-  const [selectedWateringUnitIndex, setSelectedWateringUnitIndex] = useState(0);
-  const [selectedWindUnitIndex, setSelectedWindUnitIndex] = useState(0);
-  const [selectedLightUnitIndex, setSelectedLightUnitIndex] = useState(0);
+  const [enableIndex, setEnableIndex] = useState(0); // For adjusting SELECTED OPTION in card popup
+  const [selectedUnitIndex, setSelectedUnitIndex] = useState([0,0,0]); // For adjusting THRESHOLD DATA in each actuator card
 
 
   // Threshold values
   const [thresholds, setThresholds] = useState<ThresholdSettings>({
     watering: { value: "200", unit: ["ml", "%", "%"] },
-    wind: { value: "100", unit: ["s", "%", "%", "%", "%"] },
+    fan: { value: "100", unit: ["s", "%", "%", "%", "%"] },
     light: { value: "100", unit: ["s", "%", "%"] },
   });
 
@@ -63,8 +72,8 @@ export default function ActuatorOverride() {
       index: 0,
     },
     {
-      type: "wind" as ThresholdType,
-      title: "Wind",
+      type: "fan" as ThresholdType,
+      title: "Fan",
       icon: "leaf-outline" as const,
       color: "#4caf50",
       backgroundColor: "#e8f5e9",
@@ -93,23 +102,23 @@ export default function ActuatorOverride() {
     if (!selectedThreshold) return;
 
     switch (option) {
-      case "wind_duration":
-        // For wind - set by duration
+      case "fan_duration":
+        // For Fan - set by duration
         if(enableIndex!=0){setEnableIndex(0);return;}
         handleSaveThreshold();
-        setSelectedUnitIndex([selectedUnitIndex[0],0,selectedUnitIndex[2]]) // save unit for watering, wind, light.
+        setSelectedUnitIndex([selectedUnitIndex[0],0,selectedUnitIndex[2]]) // save unit for watering, fan, light.
         break;
       case "light_duration":
         // For light - set by duration
         if(enableIndex!=0){setEnableIndex(0);return;}
         handleSaveThreshold();
-        setSelectedUnitIndex([selectedUnitIndex[0],selectedUnitIndex[1],0]) // save unit for watering, wind, light.
+        setSelectedUnitIndex([selectedUnitIndex[0],selectedUnitIndex[1],0]) // save unit for watering, fan, light.
         break;
       case "volume":
         // For watering - set by volume
         if(enableIndex!=0){setEnableIndex(0);return;}
         handleSaveThreshold();
-        setSelectedUnitIndex([0,selectedUnitIndex[1],selectedUnitIndex[2]]) // save unit for watering, wind, light.
+        setSelectedUnitIndex([0,selectedUnitIndex[1],selectedUnitIndex[2]]) // save unit for watering, fan, light.
         break;
       case "co2":
         // Set by current CO2 level
@@ -171,7 +180,7 @@ export default function ActuatorOverride() {
   };
 
   // Save threshold value
-  const handleSaveThreshold = () => {
+  const handleSaveThreshold = async () => {
     if (!selectedThreshold || !inputValue.trim()) {
       Alert.alert("Error", "Please enter a valid value");
       return;
@@ -185,22 +194,70 @@ export default function ActuatorOverride() {
       },
     }));
 
+    const actuatorInvolved = 
+    selectedThreshold === "watering"
+      ? "water"
+      : selectedThreshold === "fan"
+      ? "fan"
+      : selectedThreshold === "light"
+      ? "light"
+      : "invalid actuator"
+
+    try {      
+      console.log('Try to water: ', zone)
+
+      const payload = {
+        action: selectedThreshold, // e.g., "watering"
+        actuatorId: "actuator-123", // Replace with actual actuator ID
+        plantId: plant,
+        amount: parseFloat(inputValue),
+        trigger: "manual",
+        triggerBy: "Test by Wan [Can be deleted]",
+        timestamp: new Date().toISOString(), // current time in ISO format
+      };
+
+      console.log("Payload to be sent:", payload);
+
+      const response = await apiRequest(`/logs/action/${actuatorInvolved}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Server responded with error:", errorData);
+        Alert.alert("Error", errorData.message || "Failed to send action.");
+        return;
+      }
+      
+      const responseData = await response.json();
+      console.log("Water action response:", responseData);
+    } catch (error) {
+      console.error('Error sending water action:', error);
+      Alert.alert("Error", "Failed to start override action.");
+    } finally {
+      setModalVisible(false);
+      setSelectedThreshold(null);
+      setEnableIndex(0);
+      setInputValue("");
+    }
+
     Alert.alert(
       "Success",
       `${
         selectedThreshold.charAt(0).toUpperCase() + selectedThreshold.slice(1)
       } threshold updated to ${inputValue}${thresholds[selectedThreshold].unit[enableIndex]} [STARTING OVERRIDE!]`
     );
-
-    setModalVisible(false);
-    setSelectedThreshold(null);
-    setInputValue("");
   };
 
   // Cancel modal
   const handleCancel = () => {
     setModalVisible(false);
     setSelectedThreshold(null);
+    setEnableIndex(0);
     setInputValue("");
   };
 
@@ -211,15 +268,15 @@ export default function ActuatorOverride() {
         return [
           { key: "volume", label: "Set by volume", primary: true },
           { key: "moisture", label: "Set by moisture" },
-          { key: "moisture_range", label: "Set by moisture range (min - max)" },
+          // { key: "moisture_range", label: "Set by moisture range (min - max)" }, // Hold these features for now
         ];
-      case "wind":
+      case "fan":
         return [
-          { key: "wind_duration", label: "Set by duration", primary: true },
+          { key: "fan_duration", label: "Set by duration", primary: true },
           { key: "co2", label: "Set by CO2 level" },
           { key: "humidity", label: "Set by humidity" },
-          { key: "humidity_range", label: "Set by humidity range (min - max)" },
-          { key: "co2_range", label: "Set by CO2 level range (min - max)" },
+          // { key: "humidity_range", label: "Set by humidity range (min - max)" }, // Hold these features for now
+          // { key: "co2_range", label: "Set by CO2 level range (min - max)" },
         ];
       case "light":
         return [
@@ -227,7 +284,7 @@ export default function ActuatorOverride() {
           { key: "light_intensity", label: "Set by light intensity" },
           {
             key: "light_range",
-            label: "Set by light intensity range (min - max)",
+            // label: "Set by light intensity range (min - max)", // Hold these features for now
           },
         ];
       default:
@@ -241,7 +298,7 @@ export default function ActuatorOverride() {
     humidity: "60%",
     moisture: "40%",
     light: "70%",
-    wind: "5 m/s",
+    fan: "5 m/s",
   });
 
   const readings = getCurrentReadings();
@@ -311,8 +368,8 @@ export default function ActuatorOverride() {
               <Text style={styles.readingValue}>{readings.light}</Text>
             </View>
             <View style={styles.readingItem}>
-              <Text style={styles.readingLabel}>Wind</Text>
-              <Text style={styles.readingValue}>{readings.wind}</Text>
+              <Text style={styles.readingLabel}>Fan</Text>
+              <Text style={styles.readingValue}>{readings.fan}</Text>
             </View>
           </View>
         </Card>
@@ -341,8 +398,8 @@ export default function ActuatorOverride() {
                 <Text style={styles.actuatorSubtitle}>
                   {config.type === "watering"
                     ? "Watering Amount: "
-                    : config.type === "wind"
-                    ? "Wind Amount: "
+                    : config.type === "fan"
+                    ? "Fan Amount: "
                     : "Light Amount: "}
                   <Text style={styles.thresholdValue}>
                     {thresholds[config.type].value}
@@ -383,8 +440,8 @@ export default function ActuatorOverride() {
                 <Text style={styles.inputLabel}>
                   {selectedThreshold === "watering"
                     ? "Watering amount:"
-                    : selectedThreshold === "wind"
-                    ? "Wind amount:"
+                    : selectedThreshold === "fan"
+                    ? "Fan amount:"
                     : "Light amount:"}
                 </Text>
                 <View style={styles.inputWrapper}>
