@@ -30,6 +30,18 @@ export default function ProfileScreen() {
   const [plantType, setPlantType] = useState("");
   const [zone, setZone] = useState("");
   const [esp32Id, setEsp32Id] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [moisturePin, setMoisturePin] = useState("");
+  const [careNotes, setCareNotes] = useState("");
+  const [growthTime, setGrowthTime] = useState("");
+
+  // Threshold states
+  const [thresholds, setThresholds] = useState({
+    moisture: { min: "", max: "" },
+    temperature: { min: "", max: "" },
+    light: { min: "", max: "" },
+    airQuality: { min: "", max: "" }
+  });
 
   // Sensor selection and ID states
   const [selectedSensors, setSelectedSensors] = useState({
@@ -101,7 +113,7 @@ export default function ProfileScreen() {
   };
 
   // Handle sensor selection
-  const handleSensorPress = (sensorType) => {
+  const handleSensorPress = (sensorType: keyof typeof selectedSensors) => {
     setSelectedSensors((prev) => ({
       ...prev,
       [sensorType]: !prev[sensorType],
@@ -117,10 +129,21 @@ export default function ProfileScreen() {
   };
 
   // Handle sensor ID input
-  const handleSensorIdChange = (sensorType, value) => {
+  const handleSensorIdChange = (sensorType: string, value: string) => {
     setSensorIds((prev) => ({
       ...prev,
       [sensorType]: value,
+    }));
+  };
+
+  // Handle threshold changes
+  const handleThresholdChange = (type: keyof typeof thresholds, field: 'min' | 'max', value: string) => {
+    setThresholds((prev) => ({
+      ...prev,
+      [type]: {
+        ...prev[type],
+        [field]: value
+      }
     }));
   };
 
@@ -131,49 +154,61 @@ export default function ProfileScreen() {
       Alert.alert("Error", "Please enter plant name");
       return;
     }
-    if (!plantType.trim()) {
-      Alert.alert("Error", "Please enter plant type");
-      return;
-    }
     if (!zone.trim()) {
       Alert.alert("Error", "Please enter zone");
       return;
     }
-    if (!esp32Id.trim()) {
-      Alert.alert("Error", "Please enter ESP32 ID");
+    if (!moisturePin.trim()) {
+      Alert.alert("Error", "Please enter moisture pin");
       return;
     }
 
-    // Check if at least one sensor is selected
-    const hasSelectedSensor = Object.values(selectedSensors).some(
-      (selected) => selected
-    );
-    if (!hasSelectedSensor) {
-      Alert.alert("Error", "Please select at least one sensor");
-      return;
-    }
-
-    // Validate sensor IDs for selected sensors
-    for (const [sensorType, isSelected] of Object.entries(selectedSensors)) {
-      if (isSelected && !sensorIds[sensorType].trim()) {
-        Alert.alert("Error", `Please enter Sensor ID for ${sensorType} sensor`);
-        return;
+    // Validate thresholds
+    const validateRange = (type: string, min: string, max: string) => {
+      const minVal = parseInt(min);
+      const maxVal = parseInt(max);
+      if (isNaN(minVal) || isNaN(maxVal)) {
+        Alert.alert("Error", `Please enter valid numbers for ${type} range`);
+        return false;
       }
+      if (minVal >= maxVal) {
+        Alert.alert("Error", `${type} minimum must be less than maximum`);
+        return false;
+      }
+      return true;
+    };
+
+    if (!validateRange("Moisture", thresholds.moisture.min, thresholds.moisture.max) ||
+        !validateRange("Temperature", thresholds.temperature.min, thresholds.temperature.max) ||
+        !validateRange("Light", thresholds.light.min, thresholds.light.max) ||
+        !validateRange("Air Quality", thresholds.airQuality.min, thresholds.airQuality.max)) {
+      return;
     }
 
-    // Prepare plant data
+    // Prepare plant data according to API structure
     const plantData = {
       name: plantName.trim(),
-      group: group.trim(),
-      type: plantType.trim(),
+      userId: user?.id || "demo-user",
       zone: zone.trim(),
-      esp32Id: esp32Id.trim(),
-      sensors: Object.entries(selectedSensors)
-        .filter(([_, isSelected]) => isSelected)
-        .map(([sensorType, _]) => ({
-          type: sensorType,
-          id: sensorIds[sensorType].trim(),
-        })),
+      moisturePin: parseInt(moisturePin),
+      thresholds: {
+        moisture: {
+          min: parseInt(thresholds.moisture.min),
+          max: parseInt(thresholds.moisture.max)
+        },
+        temperature: {
+          min: parseInt(thresholds.temperature.min),
+          max: parseInt(thresholds.temperature.max)
+        },
+        light: {
+          min: parseInt(thresholds.light.min),
+          max: parseInt(thresholds.light.max)
+        }
+      },
+      type: "vegetable",
+      description: careNotes.trim() || "No description provided",
+      image: imageUrl.trim() || "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?q=80&w=1973&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      growthTime: parseInt(growthTime) || 30
     };
 
     console.log("Plant Data:", plantData);
@@ -183,9 +218,17 @@ export default function ProfileScreen() {
         onPress: () => {
           // Reset form
           setPlantName("");
-          setPlantType("");
+          setImageUrl("");
           setZone("");
-          setEsp32Id("");
+          setMoisturePin("");
+          setCareNotes("");
+          setGrowthTime("");
+          setThresholds({
+            moisture: { min: "", max: "" },
+            temperature: { min: "", max: "" },
+            light: { min: "", max: "" },
+            airQuality: { min: "", max: "" }
+          });
           setSelectedSensors({
             light: false,
             soil: false,
@@ -360,13 +403,9 @@ export default function ProfileScreen() {
         />
 
         <ScrollView style={styles.content}>
-          <Text style={styles.subHeader}>Plant Information</Text>
+          <Text style={[styles.subHeader, styles.plantInfoHeader]}>Plant Information</Text>
           <View style={styles.addPlantCardContainer}>
-            <TouchableOpacity style={styles.uploadArea}>
-              <Ionicons name="cloud-upload-outline" size={44} color="#bbb" />
-              <Text style={styles.uploadText}>Upload Image</Text>
-            </TouchableOpacity>
-
+            <Text style={styles.inputLabel}>Plant Name</Text>
             <TextInput
               style={styles.inputModern}
               placeholder="Enter Plant Name"
@@ -375,86 +414,147 @@ export default function ProfileScreen() {
               placeholderTextColor="#aaa"
             />
 
+            <Text style={styles.inputLabel}>Image URL</Text>
             <TextInput
               style={styles.inputModern}
-              placeholder="Group Number"
-              value={group}
-              onChangeText={setGroup}
+              placeholder="Enter Image URL"
+              value={imageUrl}
+              onChangeText={setImageUrl}
               placeholderTextColor="#aaa"
             />
 
+            <Text style={styles.inputLabel}>Zone</Text>
             <TextInput
               style={styles.inputModern}
-              placeholder="Plant Type"
-              value={plantType}
-              onChangeText={setPlantType}
-              placeholderTextColor="#aaa"
-            />
-
-            {/* New Zone Field */}
-            <TextInput
-              style={styles.inputModern}
-              placeholder="Zone (e.g., Zone 1, Zone 2)"
+              placeholder="Zone"
               value={zone}
               onChangeText={setZone}
               placeholderTextColor="#aaa"
             />
 
-            {/* New ESP32 ID Field */}
+            <Text style={styles.inputLabel}>Moisture Pin</Text>
             <TextInput
               style={styles.inputModern}
-              placeholder="ESP32 ID (e.g., ESP32_001)"
-              value={esp32Id}
-              onChangeText={setEsp32Id}
+              placeholder="Moisture Pin"
+              value={moisturePin}
+              onChangeText={setMoisturePin}
               placeholderTextColor="#aaa"
+              keyboardType="numeric"
             />
 
-            <Text style={styles.addSensorLabel}>Add Sensors</Text>
-            <Text style={styles.sensorDescription}>
-              Select sensors and enter their IDs
-            </Text>
+            <Text style={styles.inputLabel}>Care Notes</Text>
+            <TextInput
+              style={[styles.inputModern, styles.textArea]}
+              placeholder="Enter care instructions"
+              value={careNotes}
+              onChangeText={setCareNotes}
+              placeholderTextColor="#aaa"
+              multiline={true}
+              numberOfLines={4}
+            />
 
-            <View style={styles.sensorsGrid}>
-              {Object.entries(sensorConfigs).map(([sensorType, config]) => (
-                <View key={sensorType} style={styles.sensorContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.sensorBtnModern,
-                      { backgroundColor: config.bgColor },
-                      selectedSensors[sensorType] && styles.sensorSelected,
-                    ]}
-                    onPress={() => handleSensorPress(sensorType)}
-                  >
-                    <Ionicons
-                      name={config.icon}
-                      size={22}
-                      color={config.color}
-                      style={styles.sensorIconModern}
-                    />
-                    <Text style={styles.sensorLabelModern}>{config.label}</Text>
-                    {selectedSensors[sensorType] && (
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={20}
-                        color="#174d3c"
-                      />
-                    )}
-                  </TouchableOpacity>
-
-                  {selectedSensors[sensorType] && (
-                    <TextInput
-                      style={styles.sensorIdInput}
-                      placeholder={`${config.label} ID`}
-                      value={sensorIds[sensorType]}
-                      onChangeText={(value) =>
-                        handleSensorIdChange(sensorType, value)
-                      }
-                      placeholderTextColor="#aaa"
-                    />
-                  )}
-                </View>
-              ))}
+            {/* Thresholds Section */}
+            <Text style={styles.thresholdsHeader}>Thresholds</Text>
+            
+            {/* Moisture Range */}
+            <View style={styles.thresholdRow}>
+              <Text style={styles.thresholdLabel}>Moisture Range (%)</Text>
+              <View style={styles.rangeContainer}>
+                <TextInput
+                  style={styles.rangeInput}
+                  placeholder="30"
+                  value={thresholds.moisture.min}
+                  onChangeText={(value) => handleThresholdChange('moisture', 'min', value)}
+                  placeholderTextColor="#aaa"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.rangeText}>to</Text>
+                <TextInput
+                  style={styles.rangeInput}
+                  placeholder="60"
+                  value={thresholds.moisture.max}
+                  onChangeText={(value) => handleThresholdChange('moisture', 'max', value)}
+                  placeholderTextColor="#aaa"
+                  keyboardType="numeric"
+                />
+              </View>
             </View>
+
+            {/* Temperature Range */}
+            <View style={styles.thresholdRow}>
+              <Text style={styles.thresholdLabel}>Temperature Range (°C)</Text>
+              <View style={styles.rangeContainer}>
+                <TextInput
+                  style={styles.rangeInput}
+                  placeholder="20"
+                  value={thresholds.temperature.min}
+                  onChangeText={(value) => handleThresholdChange('temperature', 'min', value)}
+                  placeholderTextColor="#aaa"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.rangeText}>to</Text>
+                <TextInput
+                  style={styles.rangeInput}
+                  placeholder="30"
+                  value={thresholds.temperature.max}
+                  onChangeText={(value) => handleThresholdChange('temperature', 'max', value)}
+                  placeholderTextColor="#aaa"
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            {/* Light Range */}
+            <View style={styles.thresholdRow}>
+              <Text style={styles.thresholdLabel}>Light Range (%)</Text>
+              <View style={styles.rangeContainer}>
+                <TextInput
+                  style={styles.rangeInput}
+                  placeholder="50"
+                  value={thresholds.light.min}
+                  onChangeText={(value) => handleThresholdChange('light', 'min', value)}
+                  placeholderTextColor="#aaa"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.rangeText}>to</Text>
+                <TextInput
+                  style={styles.rangeInput}
+                  placeholder="80"
+                  value={thresholds.light.max}
+                  onChangeText={(value) => handleThresholdChange('light', 'max', value)}
+                  placeholderTextColor="#aaa"
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            {/* Air Quality Range */}
+            <View style={styles.thresholdRow}>
+              <Text style={styles.thresholdLabel}>Air Quality Range (%)</Text>
+              <View style={styles.rangeContainer}>
+                <TextInput
+                  style={styles.rangeInput}
+                  placeholder="40"
+                  value={thresholds.airQuality.min}
+                  onChangeText={(value) => handleThresholdChange('airQuality', 'min', value)}
+                  placeholderTextColor="#aaa"
+                  keyboardType="numeric"
+                />
+                <Text style={styles.rangeText}>to</Text>
+                <TextInput
+                  style={styles.rangeInput}
+                  placeholder="70"
+                  value={thresholds.airQuality.max}
+                  onChangeText={(value) => handleThresholdChange('airQuality', 'max', value)}
+                  placeholderTextColor="#aaa"
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+
+
+
 
             <TouchableOpacity
               style={styles.submitBtnModern}
@@ -741,6 +841,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textAlign: "center",
   },
+  plantInfoHeader: {
+    paddingTop: 24,
+  },
   editProfileContainer: {
     backgroundColor: "#fff",
     borderRadius: 20,
@@ -909,5 +1012,51 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 16,
     color: "#666",
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: "top",
+    paddingTop: 12,
+  },
+  thresholdsHeader: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+    marginTop: 24,
+    marginBottom: 16,
+    alignSelf: "flex-start",
+  },
+  thresholdRow: {
+    width: "100%",
+    marginBottom: 16,
+  },
+  thresholdLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 8,
+  },
+  rangeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  rangeInput: {
+    flex: 1,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: "#f8f8f8",
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    paddingHorizontal: 12,
+    fontSize: 14,
+    color: "#333",
+    textAlign: "center",
+  },
+  rangeText: {
+    fontSize: 14,
+    color: "#666",
+    marginHorizontal: 12,
+    fontWeight: "500",
   },
 });

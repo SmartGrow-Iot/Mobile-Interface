@@ -33,8 +33,8 @@ export default function SignInPage() {
     setLoading(true);
     try {
       await login(email, password);
-      // Navigate to main app (HomePage)
-      router.replace("/(tabs)");
+      // Navigate to getting-started page instead of tabs
+      router.replace("/getting-started");
     } catch (error) {
       Alert.alert("Error", "Sign in failed. Please try again.");
     } finally {
