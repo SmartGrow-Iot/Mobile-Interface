@@ -1,4 +1,4 @@
-export type PlantStatus = "Optimal" | "Warning" | "Critical";
+export type PlantStatus = "optimal" | "warning" | "critical";
 
 export type PlantThreshold = {
   label: string;
@@ -29,4 +29,8 @@ export type PlantDetail = {
   thresholds: PlantThreshold[];
   actuator: string;
   readings: PlantReading[];
+  // Add the missing properties that your zone screen is using
+  status: PlantStatus;
+  waterLevel: number;
+  lightLevel: number;
 };

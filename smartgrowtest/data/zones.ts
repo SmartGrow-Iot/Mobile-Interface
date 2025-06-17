@@ -5,7 +5,7 @@ export const mockZones: Record<string, Zone[]> = {
   chili: [
     {
       id: "zone1",
-      name: "Zone A",
+      name: "Zone 1",
       icon: "🌶️",
       status: "Critical",
       plantCount: 4,
@@ -18,7 +18,7 @@ export const mockZones: Record<string, Zone[]> = {
     },
     {
       id: "zone2",
-      name: "Zone B",
+      name: "Zone 2",
       icon: "🌶️",
       status: "Critical",
       plantCount: 4,
@@ -33,7 +33,7 @@ export const mockZones: Record<string, Zone[]> = {
   eggplant: [
     {
       id: "zone3",
-      name: "Zone C",
+      name: "Zone 3",
       icon: "🍆",
       status: "Optimal",
       plantCount: 4,
@@ -46,7 +46,7 @@ export const mockZones: Record<string, Zone[]> = {
     },
     {
       id: "zone4",
-      name: "Zone D",
+      name: "Zone 4",
       icon: "🍆",
       status: "Optimal",
       plantCount: 4,
