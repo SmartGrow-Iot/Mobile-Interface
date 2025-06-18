@@ -1,3 +1,4 @@
+// app/(tabs)/explore.tsx - Complete code with PDF opening functionality
 import React from "react";
 import {
   View,
@@ -9,7 +10,9 @@ import {
 } from "react-native";
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import Header from "../../components/Header"; // Adjust path as needed
+import { Asset } from "expo-asset";
+import * as Sharing from "expo-sharing";
+import Header from "../../components/Header";
 
 const getStarted = [
   {
@@ -17,8 +20,6 @@ const getStarted = [
     subtitle: "Quick start guide in HTML or PDF",
     icon: <Ionicons name="document" size={28} color="#fff" />,
     color: "#2ecc40",
-    action: "pdf",
-    path: "QuickStartGuide.pdf",
   },
   {
     title: "Teaser Video",
@@ -35,6 +36,8 @@ const onboarding = [
     subtitle: "User manual in HTML or PDF",
     icon: <Ionicons name="document-text" size={28} color="#fff" />,
     color: "#ff3b30",
+    action: "pdf",
+    path: "QuickStartGuide.pdf",
   },
   {
     title: "Training Slides",
@@ -68,7 +71,11 @@ function Card({
   onPress?: () => void;
 }) {
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={0.85}
+      onPress={onPress}
+    >
       <View style={[styles.iconCircle, { backgroundColor: color }]}>
         {icon}
       </View>
@@ -84,16 +91,59 @@ function Card({
 export default function ExploreScreen() {
   const router = useRouter();
 
+  // Function to open PDF using expo-asset and Sharing
+  const openPDFWithSharing = async () => {
+    try {
+      console.log("Attempting to open PDF with expo-asset...");
+
+      // Load the PDF as an asset
+      const asset = Asset.fromModule(
+        require("../../assets/QuickStartGuide.pdf")
+      );
+      console.log("Asset created:", asset);
+
+      // Download the asset to local storage
+      await asset.downloadAsync();
+      console.log("Asset downloaded successfully");
+      console.log("Asset local URI:", asset.localUri);
+
+      if (!asset.localUri) {
+        Alert.alert(
+          "Error",
+          "Could not load PDF asset - no local URI available"
+        );
+        return;
+      }
+
+      // Check if sharing is available on this device
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert(
+          "Sharing Not Available",
+          "Sharing is not available on this device"
+        );
+        return;
+      }
+
+      console.log("Sharing PDF from:", asset.localUri);
+
+      // Share the PDF file (this will open it in the system PDF viewer)
+      await Sharing.shareAsync(asset.localUri, {
+        mimeType: "application/pdf",
+        dialogTitle: "Open User Manual",
+        UTI: "com.adobe.pdf",
+      });
+
+      console.log("PDF shared successfully");
+    } catch (error) {
+      console.error("Error opening PDF with expo-asset:", error);
+
+    }
+  };
+
   const handleCardPress = async (item: any) => {
     if (item.action === "pdf" && item.path) {
-      // For now, show a message that the PDF feature is being worked on
-      Alert.alert(
-        "Quick Start Guide",
-        "The PDF viewing feature is currently being implemented. The Quick Start Guide PDF is available in the app bundle.",
-        [
-          { text: "OK", style: "default" }
-        ]
-      );
+      await openPDFWithSharing();
     } else if (item.action === "video") {
       router.push("/teaser-video");
     } else {
@@ -108,18 +158,18 @@ export default function ExploreScreen() {
       <ScrollView style={styles.content}>
         <Text style={styles.header}>Get Started</Text>
         {getStarted.map((item, idx) => (
-          <Card 
-            key={item.title} 
-            {...item} 
+          <Card
+            key={item.title}
+            {...item}
             onPress={() => handleCardPress(item)}
           />
         ))}
 
         <Text style={styles.header}>Onboarding Guide</Text>
         {onboarding.map((item, idx) => (
-          <Card 
-            key={item.title} 
-            {...item} 
+          <Card
+            key={item.title}
+            {...item}
             onPress={() => handleCardPress(item)}
           />
         ))}
