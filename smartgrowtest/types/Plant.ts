@@ -1,3 +1,5 @@
+import { Actuator } from "./Zone";
+
 export type PlantStatus = "optimal" | "warning" | "critical";
 
 export type PlantThreshold = {
@@ -27,7 +29,7 @@ export type PlantDetail = {
   notes: string;
   description: string;
   thresholds: PlantThreshold[];
-  actuator: string;
+  actuator: Actuator;
   readings: PlantReading[];
   // Add the missing properties that your zone screen is using
   status: PlantStatus;

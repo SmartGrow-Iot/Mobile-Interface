@@ -96,7 +96,9 @@ export default function ZoneScreen() {
             `/actuators/zone/${zone}?type=${type}`
           );
           console.log(`${type} actuators in ${zone}:`, response.count);
-          newActuators[type] = response.actuators || [];
+          newActuators[type] = (response.actuators || []).filter(
+              (actuator) => actuator?.actuatorId
+          );
         } catch (error) {
           console.error(`Error fetching ${type} actuators:`, error);
           newActuators[type] = [];

@@ -1,5 +1,5 @@
 // app/plants/[plant].tsx - Updated PlantProfile component
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, act } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { apiRequest } from "@/services/api";
@@ -90,6 +90,7 @@ export default function PlantProfile() {
       setLoading(true);
       if (!plant) return; // ensure plant ID is available
       const plantData = await apiRequest(`/plants/${plant}`);
+      console.log('Fetched Plant Data: ', plantData)
       setPlantDetails(plantData); // since apiRequest already returns parsed data
     } catch (error) {
       console.error('Error fetching plant:', error);
@@ -112,7 +113,7 @@ export default function PlantProfile() {
       router.push({
         pathname: "/actuator/override",
         params: {
-          zone: 'A',
+          zone: plantDetails.zone,
           plant: plantDetails.name,
           plantId: plantDetails.plantId,
         },
