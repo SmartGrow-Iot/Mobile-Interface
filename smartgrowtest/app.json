@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "SmartGrow",
+    "slug": "smartgrow",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo/smartgrow-1024.png",
+    "scheme": "smartgrow",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/logo/smartgrow-512.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#16a085"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "icon": "./assets/logo/smartgrow-1024.png"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo/smartgrow-512.png",
+        "backgroundColor": "#16a085"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/logo/smartgrow-192.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/logo/smartgrow-512.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#16a085"
+        }
+      ],
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
