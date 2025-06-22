@@ -59,10 +59,7 @@ export default function SignInPage() {
   };
 
   const handleForgotPassword = () => {
-    Alert.alert(
-      "Forgot Password",
-      "Password reset functionality would be implemented here."
-    );
+    router.push("/(auth)/forgotpassword" as any);
   };
 
   return (

@@ -7,6 +7,7 @@ import {
   User as FirebaseUser,
 } from "firebase/auth";
 import { authService } from "../services/authService";
+import { sendPasswordResetEmail } from "firebase/auth";
 
 type User = {
   id: string;
@@ -27,6 +28,7 @@ type AuthContextType = {
     groupNumber: string
   ) => Promise<void>;
   logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -123,6 +125,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      // Firebase automatically sends the reset email
+    } catch (error: any) {
+      console.error("Password reset error:", error);
+
+      let errorMessage = "Failed to send reset email";
+      if (error.code === "auth/user-not-found") {
+        errorMessage = "No account found with this email";
+      } else if (error.code === "auth/invalid-email") {
+        errorMessage = "Invalid email address";
+      } else if (error.code === "auth/too-many-requests") {
+        errorMessage = "Too many requests. Please try again later";
+      }
+
+      throw new Error(errorMessage);
+    }
+  };
+
   const value: AuthContextType = {
     isAuthenticated,
     user,
@@ -130,6 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     signup,
     logout,
+    resetPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
