@@ -72,9 +72,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Call your API to create user in Firebase (server-side)
       await authService.register({
-        name,
         email,
         password,
+        display_name: name, // Changed from 'name' to 'display_name'
+        group: parseInt(groupNumber), // Changed from 'groupNumber' to 'group', and convert to number
       });
 
       // After successful registration, automatically log them in
