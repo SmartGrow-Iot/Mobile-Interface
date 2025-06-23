@@ -146,8 +146,8 @@ export default function ActuatorOverride() {
     // Threshold values
     const [thresholds, setThresholds] = useState<ThresholdSettings>({
         watering: { value: "200", unit: ["ml", "%", "%"] },
-        fan: { value: "100", unit: ["s", "%", "%", "%", "%"] },
-        light: { value: "100", unit: ["s", "%", "%"] },
+        fan: { value: "0", unit: ["s", "%", "%", "%", "%"] },
+        light: { value: "0", unit: ["s", "%", "%"] },
     });
 
     // Input state for modal

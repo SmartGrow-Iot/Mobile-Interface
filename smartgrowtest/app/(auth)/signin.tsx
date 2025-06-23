@@ -42,17 +42,6 @@ export default function SignInPage() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      router.replace("/(tabs)");
-    } catch (error) {
-      Alert.alert("Error", "Google sign in failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const navigateToSignUp = () => {
     router.push("/(auth)/signup");
@@ -156,19 +145,6 @@ export default function SignInPage() {
             </Text>
           </TouchableOpacity>
 
-          {/* Google Sign In Button */}
-          <TouchableOpacity
-            style={[styles.googleButton, loading && styles.buttonDisabled]}
-            onPress={handleGoogleSignIn}
-            disabled={loading}
-          >
-            <View style={styles.googleButtonContent}>
-              <View style={styles.googleIcon}>
-                <Text style={styles.googleIconText}>G</Text>
-              </View>
-              <Text style={styles.googleButtonText}>Sign in with Google</Text>
-            </View>
-          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

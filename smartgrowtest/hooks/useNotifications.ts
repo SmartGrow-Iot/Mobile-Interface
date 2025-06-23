@@ -1,4 +1,4 @@
-// hooks/useNotifications.ts - Updated to include alerts
+// hooks/useNotifications.ts - Complete implementation with force refresh capability
 import { useState, useEffect, useCallback } from "react";
 import { notificationService } from "../services/notificationService";
 import { alertService } from "../services/alertService";
@@ -15,34 +15,32 @@ export function useNotifications() {
     notifications.filter((n) => n.status === "unread").length +
     alerts.filter((a) => a.severity === "critical").length;
 
-  // Initialize services
+  // Initialize services only once on mount
   useEffect(() => {
+    let notificationUnsubscribe: (() => void) | null = null;
+    let alertUnsubscribe: (() => void) | null = null;
+
     const initializeServices = async () => {
-      setIsLoading(true);
       try {
-        // Subscribe to notifications
-        const unsubscribeNotifications = notificationService.subscribe(
+        setIsLoading(true);
+
+        // Subscribe to notifications first to get immediate updates
+        notificationUnsubscribe = notificationService.subscribe(
           (newNotifications) => {
             setNotifications(newNotifications);
           }
         );
 
         // Subscribe to alerts
-        const unsubscribeAlerts = alertService.subscribe((newAlerts) => {
+        alertUnsubscribe = alertService.subscribe((newAlerts) => {
           setAlerts(newAlerts);
         });
 
-        // Initialize both services
+        // Initialize both services (will use cache if available)
         await Promise.all([
           notificationService.initialize(),
           alertService.initialize(),
         ]);
-
-        // Store cleanup functions
-        return () => {
-          unsubscribeNotifications();
-          unsubscribeAlerts();
-        };
       } catch (error) {
         console.error("Error initializing notification services:", error);
       } finally {
@@ -50,13 +48,18 @@ export function useNotifications() {
       }
     };
 
-    const cleanup = initializeServices();
+    initializeServices();
 
-    // Cleanup on unmount
+    // Cleanup subscriptions on unmount
     return () => {
-      cleanup.then((cleanupFn) => cleanupFn?.());
+      if (notificationUnsubscribe) {
+        notificationUnsubscribe();
+      }
+      if (alertUnsubscribe) {
+        alertUnsubscribe();
+      }
     };
-  }, []);
+  }, []); // Empty dependency array - only run once
 
   // Notification actions
   const markAsRead = useCallback((notificationId: string) => {
@@ -81,23 +84,54 @@ export function useNotifications() {
     alertService.dismissAlert(alertId);
   }, []);
 
-  // Refresh both services
+  // ✨ Enhanced refresh function with force capability
   const refresh = useCallback(async () => {
     setIsLoading(true);
     try {
+      console.log("🔄 Force refreshing notifications and alerts...");
+
+      // Force clear cache for both services
+      notificationService.forceClearCache();
+      alertService.forceClearCache();
+
+      // Now refresh both services which will fetch fresh data
       await Promise.all([
         notificationService.refresh(),
         alertService.refresh(),
       ]);
+
+      console.log("✅ Force refresh completed");
     } catch (error) {
-      console.error("Error refreshing notifications and alerts:", error);
+      console.error("Error force refreshing notifications and alerts:", error);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
+  // Get cache status for debugging (development only)
+  const getCacheStatus = useCallback(() => {
+    if (__DEV__) {
+      return {
+        notifications: notificationService.getCacheStatus(),
+        alerts: alertService.getCacheStatus(),
+      };
+    }
+    return null;
+  }, []);
+
+  // Test connectivity for both services (development helper)
+  const testConnectivity = useCallback(async () => {
+    if (__DEV__) {
+      console.log("🔍 Testing API connectivity...");
+      await Promise.all([
+        notificationService.testApiConnectivity(),
+        alertService.testConnectivity(),
+      ]);
+    }
+  }, []);
+
   return {
-    // Notifications
+    // Data
     notifications,
     alerts,
     unreadCount,
@@ -112,7 +146,11 @@ export function useNotifications() {
     // Alert actions
     dismissAlert,
 
-    // Common actions
+    // Refresh action (now includes force clear)
     refresh,
+
+    // Development helpers
+    getCacheStatus,
+    testConnectivity,
   };
 }
