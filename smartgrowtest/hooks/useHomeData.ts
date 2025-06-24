@@ -1,7 +1,7 @@
-// hooks/useHomeData.ts - Custom hook for data management
+// hooks/useHomeData.ts - Updated for direct zone access
 import { useMemo } from "react";
 import { mockAlerts } from "../data/alerts";
-import { mockZoneCategories } from "../data/zones";
+import { mockZonesDirect, mockZoneCategories } from "../data/zones";
 import { mockPlants } from "../data/plants";
 import { Zone } from "@/types/Zone";
 
@@ -14,12 +14,11 @@ export function useHomeData() {
     const criticalAlerts = mockAlerts.filter(
       (alert) => alert.severity === "critical"
     ).length;
-    const optimalZones = mockZoneCategories.reduce((count, category) => {
-      return (
-        count +
-        category.zones.filter((zone) => zone.status === "Optimal").length
-      );
-    }, 0);
+
+    // Use direct zones for optimal count
+    const optimalZones = mockZonesDirect.filter(
+      (zone) => zone.status === "Optimal"
+    ).length;
 
     return {
       totalPlants,
@@ -38,18 +37,42 @@ export function useHomeData() {
   }, []);
 
   const criticalZones = useMemo(() => {
-    return mockZoneCategories.reduce((zones, category) => {
-      const critical = category.zones.filter(
-        (zone) => zone.status === "Critical"
-      );
-      return [...zones, ...critical];
-    }, [] as Zone[]);
+    // Use direct zones for critical zones
+    return mockZonesDirect.filter((zone) => zone.status === "Critical");
+  }, []);
+
+  // Zone statistics
+  const zoneStats = useMemo(() => {
+    const totalZones = mockZonesDirect.length;
+    const optimalCount = mockZonesDirect.filter(
+      (z) => z.status === "Optimal"
+    ).length;
+    const warningCount = mockZonesDirect.filter(
+      (z) => z.status === "Warning"
+    ).length;
+    const criticalCount = mockZonesDirect.filter(
+      (z) => z.status === "Critical"
+    ).length;
+    const totalPlantsInZones = mockZonesDirect.reduce(
+      (sum, zone) => sum + zone.plantCount,
+      0
+    );
+
+    return {
+      totalZones,
+      optimalCount,
+      warningCount,
+      criticalCount,
+      totalPlantsInZones,
+    };
   }, []);
 
   return {
     stats,
     alerts: recentAlerts,
     criticalZones,
-    zoneCategories: mockZoneCategories,
+    zoneCategories: mockZoneCategories, // Keep for backward compatibility
+    zones: mockZonesDirect, // Direct zones access
+    zoneStats,
   };
 }

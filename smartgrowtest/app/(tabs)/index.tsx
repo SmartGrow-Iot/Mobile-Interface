@@ -1,4 +1,4 @@
-// app/(tabs)/index.tsx - Complete implementation with force refresh
+// app/(tabs)/index.tsx - Updated to show 4 zones directly
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, ScrollView, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
@@ -6,26 +6,22 @@ import Header from "../../components/Header";
 
 // Import components
 import { AlertsList } from "../../components/features/alerts/AlertsList";
-import { ZoneTabNavigation } from "../../components/features/zones/ZoneTabNavigation";
 import { ZoneGrid } from "../../components/features/zones/ZoneGrid";
 
 // Import data and services
-import { mockZoneCategories } from "../../data/zones";
+import { mockZonesDirect } from "../../data/zones";
 import { alertService } from "../../services/alertService";
 import { Alert } from "../../types/Alert";
 import { Zone } from "../../types/Zone";
 
 export default function HomePage() {
-  const [activeCategory, setActiveCategory] = useState<string>("chili");
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  // Get active zones based on selected category
-  const activeZones =
-    mockZoneCategories.find((category) => category.id === activeCategory)
-      ?.zones || [];
+  // Use direct zones data (4 zones without categories)
+  const zones = mockZonesDirect;
 
   // Initialize and subscribe to alerts - only runs once on mount
   useEffect(() => {
@@ -118,11 +114,6 @@ export default function HomePage() {
     router.push(`/plants/zone/${zone.id}`);
   };
 
-  // Handle category change
-  const handleCategoryChange = (categoryId: string) => {
-    setActiveCategory(categoryId);
-  };
-
   // ✨ Handle refresh with force cache clear
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -170,18 +161,11 @@ export default function HomePage() {
           showEmpty={!isLoading}
         />
 
-        {/* Zone Category Tabs */}
-        <ZoneTabNavigation
-          categories={mockZoneCategories}
-          activeCategory={activeCategory}
-          onCategoryChange={handleCategoryChange}
-        />
-
-        {/* Zones Grid */}
+        {/* Zones Grid - Direct display of 4 zones */}
         <ZoneGrid
-          zones={activeZones}
+          zones={zones}
           onZonePress={handleZonePress}
-          numColumns={1}
+          numColumns={2}
           cardSize="large"
           showStats={true}
         />
