@@ -1,5 +1,4 @@
-import { Actuator } from "./Zone";
-
+// types/Plant.ts - Updated for API structure
 export type PlantStatus = "optimal" | "warning" | "critical";
 
 export type PlantThreshold = {
@@ -15,11 +14,44 @@ export type PlantReading = {
   value: string;
 };
 
-export type PlantDetail = {
+// API Plant structure (matching the API response)
+export interface PlantDetail {
   plantId: string;
   name: string;
-  image: string;
+  description: string;
+  type: "vegetable";
+  growthTime: number;
   zone: string;
+  moisturePin: number;
+  image: string;
+  userId: string;
+  status: PlantStatus;
+  thresholds: {
+    light: { min: number; max: number };
+    temperature: { min: number; max: number };
+    moisture: { min: number; max: number };
+    airQuality: { min: number; max: number };
+  };
+  zoneHardware: {
+    actuators: {
+      fanActuator: string;
+      waterActuator: string;
+      lightActuator: string;
+    };
+    sensors: {
+      light: string;
+      humidity: string;
+      temperature: string;
+      moisture: string;
+      airQuality: string;
+    };
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+// For UI display (simplified from API data)
+export interface PlantInfo {
   datePlanted: string;
   optimalMoisture: string;
   optimalLight: string;
@@ -27,15 +59,7 @@ export type PlantDetail = {
   type: string;
   growthTime: string;
   notes: string;
-  description: string;
-  thresholds: PlantThreshold[];
-  actuator: Actuator;
-  readings: PlantReading[];
-  // Add the missing properties that your zone screen is using
-  status: PlantStatus;
-  waterLevel: number;
-  lightLevel: number;
-};
+}
 
 // API Request/Response types for plant creation
 export interface PlantCreationRequest {
@@ -60,6 +84,79 @@ export interface PlantCreationResponse {
   message: string;
   success: boolean;
 }
+
+// Helper functions for plant data
+export const PlantHelpers = {
+  // Convert API plant data to UI format
+  getPlantInfo: (plant: PlantDetail): PlantInfo => ({
+    datePlanted: new Date(plant.createdAt).toLocaleDateString("en-GB"),
+    optimalMoisture: `${plant.thresholds.moisture.min} - ${plant.thresholds.moisture.max}%`,
+    optimalLight: `${plant.thresholds.light.min} - ${plant.thresholds.light.max}%`,
+    optimalTemp: `${plant.thresholds.temperature.min} - ${plant.thresholds.temperature.max}°C`,
+    type: plant.type,
+    growthTime: `${plant.growthTime} days`,
+    notes: plant.description || "No additional notes",
+  }),
+
+  // Get zone display name
+  getZoneDisplayName: (zone: string): string => {
+    const zoneMap: Record<string, string> = {
+      zone1: "Zone 1",
+      zone2: "Zone 2",
+      zone3: "Zone 3",
+      zone4: "Zone 4",
+    };
+    return zoneMap[zone] || zone;
+  },
+
+  // Get plant icon based on zone (since API doesn't specify plant species)
+  getPlantIcon: (zone: string): string => {
+    // You can customize this based on your preference
+    switch (zone) {
+      case "zone1":
+      case "zone2":
+        return "🌶️"; // Chili zones
+      case "zone3":
+      case "zone4":
+        return "🍆"; // Eggplant zones
+      default:
+        return "🌱"; // Default plant
+    }
+  },
+
+  // Generate thresholds for display
+  getPlantThresholds: (plant: PlantDetail): PlantThreshold[] => [
+    {
+      label: "Moisture Level is",
+      value:
+        plant.status === "optimal"
+          ? "Optimal"
+          : plant.status === "warning"
+          ? "Warning"
+          : "Critical",
+      color:
+        plant.status === "optimal"
+          ? "#27ae60"
+          : plant.status === "warning"
+          ? "#f39c12"
+          : "#e74c3c",
+      bg:
+        plant.status === "optimal"
+          ? "#e8f5e8"
+          : plant.status === "warning"
+          ? "#fdf6e3"
+          : "#fdf2f2",
+      icon: "💧",
+    },
+    {
+      label: "Temperature is",
+      value: "Optimal", // Could be enhanced with actual sensor data
+      color: "#27ae60",
+      bg: "#e8f5e8",
+      icon: "🌡️",
+    },
+  ],
+};
 
 // Validation helpers for plant creation
 export const PlantValidation = {

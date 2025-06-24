@@ -1,4 +1,4 @@
-// app/plants/zone/[zone].tsx - Updated with actuator data
+// app/plants/zone/[zone].tsx - Simplified for API data only
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -13,101 +13,52 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Header from "../../../components/Header";
 import { apiRequest } from "@/services/api";
-import { PlantDetail } from "@/types/Plant";
-
-// Types for actuator data
-interface ActuatorData {
-  actuatorId: string;
-  actuatorModel: string;
-  description: string;
-  type: "watering" | "light" | "fan";
-  zone: string;
-  createdAt: string;
-}
-
-interface ZoneActuatorsResponse {
-  count: number;
-  actuators: ActuatorData[];
-}
-
-interface ActuatorSummary {
-  watering: ActuatorData[];
-  light: ActuatorData[];
-  fan: ActuatorData[];
-}
+import { Zone, ZonePlant, ZoneInfo, ZoneHelpers } from "@/types/Zone";
 
 export default function ZoneScreen() {
   const { zone } = useLocalSearchParams();
   const router = useRouter();
-  const [zonePlants, setZonePlants] = useState<PlantDetail[]>([]);
-  const [actuators, setActuators] = useState<ActuatorSummary>({
-    watering: [],
-    light: [],
-    fan: [],
-  });
+  const [zoneData, setZoneData] = useState<Zone | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Zone display name mapping
-  const getZoneDisplayName = (zoneId: string): string => {
-    const zoneMap: Record<string, string> = {
-      zone1: "Zone 1",
-      zone2: "Zone 2",
-      zone3: "Zone 3",
-      zone4: "Zone 4",
-    };
-    return zoneMap[zoneId] || zoneId;
-  };
-
-  // Fetch plants for the zone
-  const fetchPlants = async () => {
+  // Fetch zone data from API
+  const fetchZoneData = async () => {
     try {
-      console.log("Fetching plants for zone:", zone);
-      const response = await apiRequest(`/zones/${zone}/plants`);
-      console.log("Fetched Plants:", response);
-      const plants = response?.plants || [];
-      setZonePlants(plants);
+      console.log("Fetching data for zone:", zone);
+
+      // Fetch plants in the zone
+      const plantsResponse = await apiRequest(`/zones/${zone}/plants`);
+      console.log("Zone plants response:", plantsResponse);
+
+      // Fetch zone info
+      const zoneInfoResponse = await apiRequest(`/zones/${zone}`);
+      console.log("Zone info response:", zoneInfoResponse);
+
+      const plants: ZonePlant[] = plantsResponse?.plants || [];
+      const zoneInfo: ZoneInfo = zoneInfoResponse;
+
+      // Create zone object
+      const zoneObject: Zone = {
+        id: zone as string,
+        name: ZoneHelpers.getZoneDisplayName(zone as string),
+        status: ZoneHelpers.getZoneStatus(plants),
+        plantCount: plants.length,
+        plants: plants,
+        zoneInfo: zoneInfo,
+      };
+
+      setZoneData(zoneObject);
     } catch (error) {
-      console.error("Error fetching plants:", error);
-      setZonePlants([]);
-    }
-  };
-
-  // Fetch actuators for the zone
-  const fetchActuators = async () => {
-    const actuatorTypes: ("watering" | "light" | "fan")[] = [
-      "watering",
-      "light",
-      "fan",
-    ];
-    const newActuators: ActuatorSummary = {
-      watering: [],
-      light: [],
-      fan: [],
-    };
-
-    try {
-      console.log("Fetching actuators for zone:", zone);
-
-      // Fetch each type of actuator
-      for (const type of actuatorTypes) {
-        try {
-          const response: ZoneActuatorsResponse = await apiRequest(
-            `/actuators/zone/${zone}?type=${type}`
-          );
-          console.log(`${type} actuators in ${zone}:`, response.count);
-          newActuators[type] = (response.actuators || []).filter(
-              (actuator) => actuator?.actuatorId
-          );
-        } catch (error) {
-          console.error(`Error fetching ${type} actuators:`, error);
-          newActuators[type] = [];
-        }
-      }
-
-      setActuators(newActuators);
-    } catch (error) {
-      console.error("Error fetching actuators:", error);
+      console.error("Error fetching zone data:", error);
+      // Create empty zone if API fails
+      setZoneData({
+        id: zone as string,
+        name: ZoneHelpers.getZoneDisplayName(zone as string),
+        status: "optimal",
+        plantCount: 0,
+        plants: [],
+      });
     }
   };
 
@@ -116,7 +67,7 @@ export default function ZoneScreen() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        await Promise.all([fetchPlants(), fetchActuators()]);
+        await fetchZoneData();
       } finally {
         setLoading(false);
       }
@@ -129,7 +80,7 @@ export default function ZoneScreen() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([fetchPlants(), fetchActuators()]);
+      await fetchZoneData();
     } finally {
       setRefreshing(false);
     }
@@ -141,60 +92,26 @@ export default function ZoneScreen() {
   };
 
   // Handle actuator press - navigate to actuator override
-  const handleActuatorPress = (actuator: ActuatorData) => {
+  const handleActuatorPress = () => {
     router.push({
       pathname: "/actuator/override",
       params: {
         zone: zone,
-        actuatorId: actuator.actuatorId,
-        actuatorType: actuator.type,
       },
     });
   };
 
-  // Get icon for actuator type
-  const getActuatorIcon = (type: string): keyof typeof Ionicons.glyphMap => {
-    switch (type) {
-      case "watering":
-        return "water-outline";
-      case "light":
-        return "sunny-outline";
-      case "fan":
-        return "leaf-outline";
-      default:
-        return "hardware-chip-outline";
-    }
-  };
-
-  // Get color for actuator type
-  const getActuatorColor = (type: string): string => {
-    switch (type) {
-      case "watering":
-        return "#45aaf2";
-      case "light":
-        return "#f7b731";
-      case "fan":
-        return "#4caf50";
-      default:
-        return "#666";
-    }
-  };
-
-  // Calculate total actuators
-  const totalActuators =
-    actuators.watering.length + actuators.light.length + actuators.fan.length;
-
   // Custom breadcrumbs for zone page
   const customBreadcrumbs = [
     { label: "Home", route: "/" },
-    { label: getZoneDisplayName(zone as string) },
+    { label: zoneData?.name || "Zone" },
   ];
 
   if (loading) {
     return (
       <View style={styles.container}>
         <Header
-          title={getZoneDisplayName(zone as string)}
+          title={ZoneHelpers.getZoneDisplayName(zone as string)}
           showBackButton={true}
           customBreadcrumbs={customBreadcrumbs}
         />
@@ -206,10 +123,21 @@ export default function ZoneScreen() {
     );
   }
 
+  if (!zoneData) {
+    return (
+      <View style={styles.container}>
+        <Header title="Zone Not Found" showBackButton={true} />
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Failed to load zone data</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Header
-        title={getZoneDisplayName(zone as string)}
+        title={zoneData.name}
         showBackButton={true}
         customBreadcrumbs={customBreadcrumbs}
       />
@@ -232,156 +160,92 @@ export default function ZoneScreen() {
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
               <Ionicons name="leaf-outline" size={24} color="#4caf50" />
-              <Text style={styles.summaryValue}>{zonePlants.length}</Text>
+              <Text style={styles.summaryValue}>{zoneData.plantCount}</Text>
               <Text style={styles.summaryLabel}>Plants</Text>
-            </View>
-            <View style={styles.summaryItem}>
-              <Ionicons
-                name="hardware-chip-outline"
-                size={24}
-                color="#2196f3"
-              />
-              <Text style={styles.summaryValue}>{totalActuators}</Text>
-              <Text style={styles.summaryLabel}>Actuators</Text>
             </View>
             <View style={styles.summaryItem}>
               <Ionicons
                 name="checkmark-circle-outline"
                 size={24}
-                color="#ff9800"
+                color="#2ecc71"
               />
               <Text style={styles.summaryValue}>
-                {zonePlants.filter((p) => p.status === "optimal").length}
+                {zoneData.plants.filter((p) => p.status === "optimal").length}
               </Text>
               <Text style={styles.summaryLabel}>Healthy</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Ionicons name="warning-outline" size={24} color="#f39c12" />
+              <Text style={styles.summaryValue}>
+                {zoneData.plants.filter((p) => p.status === "warning").length}
+              </Text>
+              <Text style={styles.summaryLabel}>Warning</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Ionicons name="alert-circle-outline" size={24} color="#e74c3c" />
+              <Text style={styles.summaryValue}>
+                {zoneData.plants.filter((p) => p.status === "critical").length}
+              </Text>
+              <Text style={styles.summaryLabel}>Critical</Text>
             </View>
           </View>
         </View>
 
-        {/* Actuators Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Actuators ({totalActuators})</Text>
-
-          {/* Watering Actuators */}
-          <View style={styles.actuatorTypeSection}>
-            <Text style={styles.actuatorTypeTitle}>
-              💧 Watering Systems ({actuators.watering.length})
-            </Text>
-            {actuators.watering.length === 0 ? (
-              <Text style={styles.noActuatorsText}>
-                No watering actuators found
+        {/* Zone Hardware Info */}
+        {zoneData.zoneInfo && (
+          <View style={styles.hardwareCard}>
+            <Text style={styles.hardwareTitle}>Zone Hardware</Text>
+            <View style={styles.hardwareSection}>
+              <Text style={styles.hardwareSubtitle}>Actuators</Text>
+              <Text style={styles.hardwareItem}>
+                💧 Water: {zoneData.zoneInfo.actuators.waterActuator}
               </Text>
-            ) : (
-              actuators.watering.map((actuator) => (
-                <TouchableOpacity
-                  key={actuator.actuatorId}
-                  style={styles.actuatorCard}
-                  onPress={() => handleActuatorPress(actuator)}
-                >
-                  <View style={styles.actuatorHeader}>
-                    <Ionicons
-                      name={getActuatorIcon(actuator.type)}
-                      size={24}
-                      color={getActuatorColor(actuator.type)}
-                    />
-                    <Text style={styles.actuatorModel}>
-                      {actuator.actuatorModel}
-                    </Text>
-                  </View>
-                  <Text style={styles.actuatorDescription}>
-                    {actuator.description}
-                  </Text>
-                  <Text style={styles.actuatorId}>
-                    ID: {actuator.actuatorId}
-                  </Text>
-                </TouchableOpacity>
-              ))
-            )}
-          </View>
-
-          {/* Light Actuators */}
-          <View style={styles.actuatorTypeSection}>
-            <Text style={styles.actuatorTypeTitle}>
-              ☀️ Light Systems ({actuators.light.length})
-            </Text>
-            {actuators.light.length === 0 ? (
-              <Text style={styles.noActuatorsText}>
-                No light actuators found
+              <Text style={styles.hardwareItem}>
+                💡 Light: {zoneData.zoneInfo.actuators.lightActuator}
               </Text>
-            ) : (
-              actuators.light.map((actuator) => (
-                <TouchableOpacity
-                  key={actuator.actuatorId}
-                  style={styles.actuatorCard}
-                  onPress={() => handleActuatorPress(actuator)}
-                >
-                  <View style={styles.actuatorHeader}>
-                    <Ionicons
-                      name={getActuatorIcon(actuator.type)}
-                      size={24}
-                      color={getActuatorColor(actuator.type)}
-                    />
-                    <Text style={styles.actuatorModel}>
-                      {actuator.actuatorModel}
-                    </Text>
-                  </View>
-                  <Text style={styles.actuatorDescription}>
-                    {actuator.description}
-                  </Text>
-                  <Text style={styles.actuatorId}>
-                    ID: {actuator.actuatorId}
-                  </Text>
-                </TouchableOpacity>
-              ))
-            )}
-          </View>
+              <Text style={styles.hardwareItem}>
+                🌪️ Fan: {zoneData.zoneInfo.actuators.fanActuator}
+              </Text>
+            </View>
 
-          {/* Fan Actuators */}
-          <View style={styles.actuatorTypeSection}>
-            <Text style={styles.actuatorTypeTitle}>
-              🌪️ Ventilation Systems ({actuators.fan.length})
-            </Text>
-            {actuators.fan.length === 0 ? (
-              <Text style={styles.noActuatorsText}>No fan actuators found</Text>
-            ) : (
-              actuators.fan.map((actuator) => (
-                <TouchableOpacity
-                  key={actuator.actuatorId}
-                  style={styles.actuatorCard}
-                  onPress={() => handleActuatorPress(actuator)}
-                >
-                  <View style={styles.actuatorHeader}>
-                    <Ionicons
-                      name={getActuatorIcon(actuator.type)}
-                      size={24}
-                      color={getActuatorColor(actuator.type)}
-                    />
-                    <Text style={styles.actuatorModel}>
-                      {actuator.actuatorModel}
-                    </Text>
-                  </View>
-                  <Text style={styles.actuatorDescription}>
-                    {actuator.description}
-                  </Text>
-                  <Text style={styles.actuatorId}>
-                    ID: {actuator.actuatorId}
-                  </Text>
-                </TouchableOpacity>
-              ))
-            )}
+            <View style={styles.hardwareSection}>
+              <Text style={styles.hardwareSubtitle}>Sensors</Text>
+              <Text style={styles.hardwareItem}>
+                ☀️ Light: {zoneData.zoneInfo.sensors.lightSensor}
+              </Text>
+              <Text style={styles.hardwareItem}>
+                🌡️ Temperature: {zoneData.zoneInfo.sensors.tempSensor}
+              </Text>
+              <Text style={styles.hardwareItem}>
+                💧 Humidity: {zoneData.zoneInfo.sensors.humiditySensor}
+              </Text>
+              <Text style={styles.hardwareItem}>
+                🌬️ Air Quality: {zoneData.zoneInfo.sensors.gasSensor}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.actuatorButton}
+              onPress={handleActuatorPress}
+            >
+              <Ionicons name="settings-outline" size={20} color="#fff" />
+              <Text style={styles.actuatorButtonText}>Control Actuators</Text>
+            </TouchableOpacity>
           </View>
-        </View>
+        )}
 
         {/* Plants Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Plants ({zonePlants.length})</Text>
+          <Text style={styles.sectionTitle}>
+            Plants ({zoneData.plantCount})
+          </Text>
           <View style={styles.plantsGrid}>
-            {zonePlants.length === 0 ? (
+            {zoneData.plants.length === 0 ? (
               <Text style={styles.noPlantsText}>
                 No plants found in this zone
               </Text>
             ) : (
-              zonePlants.map((plant) => (
+              zoneData.plants.map((plant) => (
                 <TouchableOpacity
                   key={plant.plantId}
                   style={styles.plantCard}
@@ -394,31 +258,31 @@ export default function ZoneScreen() {
                         styles.statusBadge,
                         {
                           backgroundColor:
-                            plant.status === "optimal" ? "#4CAF50" : "#FF5252",
+                            plant.status === "optimal"
+                              ? "#4CAF50"
+                              : plant.status === "warning"
+                              ? "#FF9800"
+                              : "#FF5252",
                         },
                       ]}
                     >
-                      <Text style={styles.statusText}>{plant.status}</Text>
+                      <Text style={styles.statusText}>
+                        {plant.status.charAt(0).toUpperCase() +
+                          plant.status.slice(1)}
+                      </Text>
                     </View>
                   </View>
                   <Text style={styles.plantType}>{plant.type}</Text>
-                  <View style={styles.plantStats}>
-                    <View style={styles.statItem}>
-                      <Ionicons
-                        name="water-outline"
-                        size={20}
-                        color="#45aaf2"
-                      />
-                      <Text style={styles.statValue}>{plant.waterLevel}%</Text>
-                    </View>
-                    <View style={styles.statItem}>
-                      <Ionicons
-                        name="sunny-outline"
-                        size={20}
-                        color="#f7b731"
-                      />
-                      <Text style={styles.statValue}>{plant.lightLevel}%</Text>
-                    </View>
+                  <Text style={styles.plantDescription} numberOfLines={2}>
+                    {plant.description}
+                  </Text>
+                  <View style={styles.plantFooter}>
+                    <Text style={styles.plantPin}>
+                      Pin: {plant.moisturePin}
+                    </Text>
+                    <Text style={styles.plantDate}>
+                      {new Date(plant.createdAt).toLocaleDateString()}
+                    </Text>
                   </View>
                 </TouchableOpacity>
               ))
@@ -448,6 +312,15 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
+    fontSize: 16,
+    color: "#666",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorText: {
     fontSize: 16,
     color: "#666",
   },
@@ -486,6 +359,53 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 4,
   },
+  hardwareCard: {
+    backgroundColor: "#fff",
+    margin: 16,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  hardwareTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#174d3c",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  hardwareSection: {
+    marginBottom: 16,
+  },
+  hardwareSubtitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 8,
+  },
+  hardwareItem: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 4,
+    fontFamily: "monospace",
+  },
+  actuatorButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#174d3c",
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
+  },
+  actuatorButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
   section: {
     marginHorizontal: 16,
     marginBottom: 24,
@@ -495,53 +415,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#174d3c",
     marginBottom: 16,
-  },
-  actuatorTypeSection: {
-    marginBottom: 20,
-  },
-  actuatorTypeTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 12,
-  },
-  actuatorCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  actuatorHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  actuatorModel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    marginLeft: 12,
-  },
-  actuatorDescription: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 4,
-  },
-  actuatorId: {
-    fontSize: 12,
-    color: "#999",
-    fontFamily: "monospace",
-  },
-  noActuatorsText: {
-    fontSize: 14,
-    color: "#999",
-    fontStyle: "italic",
-    textAlign: "center",
-    paddingVertical: 16,
   },
   plantsGrid: {
     flexDirection: "row",
@@ -584,21 +457,28 @@ const styles = StyleSheet.create({
   plantType: {
     fontSize: 14,
     color: "#666",
-    marginBottom: 12,
+    marginBottom: 8,
+    textTransform: "capitalize",
   },
-  plantStats: {
+  plantDescription: {
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 8,
+    lineHeight: 16,
+  },
+  plantFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
-  },
-  statItem: {
-    flexDirection: "row",
     alignItems: "center",
   },
-  statValue: {
-    marginLeft: 4,
-    fontSize: 14,
-    color: "#666",
+  plantPin: {
+    fontSize: 12,
+    color: "#174d3c",
     fontWeight: "500",
+  },
+  plantDate: {
+    fontSize: 12,
+    color: "#999",
   },
   noPlantsText: {
     fontSize: 14,
@@ -606,5 +486,6 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     textAlign: "center",
     paddingVertical: 20,
+    width: "100%",
   },
 });

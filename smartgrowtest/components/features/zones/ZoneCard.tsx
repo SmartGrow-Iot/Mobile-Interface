@@ -1,65 +1,45 @@
-// components/features/zones/ZoneCard.tsx - Fixed with all required styles
+// components/features/zones/ZoneCard.tsx - Simplified for API data
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Zone } from "../../../types/Zone";
+import { Zone, ZoneHelpers } from "../../../types/Zone";
 import { Badge } from "../../ui/Badge";
 import { Card } from "../../ui/Card";
 
 type ZoneCardProps = {
   zone: Zone;
   onPress?: (zone: Zone) => void;
-  showStats?: boolean;
   size?: "small" | "medium" | "large";
 };
 
-export function ZoneCard({
-  zone,
-  onPress,
-  showStats = true,
-  size = "medium",
-}: ZoneCardProps) {
+export function ZoneCard({ zone, onPress, size = "medium" }: ZoneCardProps) {
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case "Optimal":
+      case "optimal":
         return "success";
-      case "Warning":
+      case "warning":
         return "warning";
-      case "Critical":
+      case "critical":
         return "error";
       default:
         return "default";
     }
   };
 
-  const getZoneIcon = (zoneId: string) => {
-    // Return appropriate icon based on zone ID
-    switch (zoneId) {
-      case "zone1":
-        return "🌶️"; // Chili zone
-      case "zone2":
-        return "🌶️"; // Chili zone
-      case "zone3":
-        return "🍆"; // Eggplant zone
-      case "zone4":
-        return "🍆"; // Eggplant zone
-      default:
-        return "🌱"; // Default plant icon
-    }
-  };
-
   const getZoneColor = (status: string) => {
     switch (status) {
-      case "Optimal":
+      case "optimal":
         return "#e8f5e9"; // Light green
-      case "Warning":
+      case "warning":
         return "#fff3e0"; // Light orange
-      case "Critical":
+      case "critical":
         return "#ffebee"; // Light red
       default:
         return "#f5f5f5"; // Light gray
     }
   };
+
+  const zoneIcon = ZoneHelpers.getPlantTypeIcon(zone.plants);
 
   return (
     <TouchableOpacity
@@ -76,66 +56,61 @@ export function ZoneCard({
       >
         <View style={styles.zoneHeader}>
           <View style={styles.zoneInfo}>
-            <Text style={styles.zoneIcon}>{getZoneIcon(zone.id)}</Text>
+            <Text style={styles.zoneIcon}>{zoneIcon}</Text>
             <View style={styles.zoneDetails}>
               <View style={styles.zoneTitleRow}>
                 <Text style={[styles.zoneName, styles[`${size}Name`]]}>
                   {zone.name}
                 </Text>
                 <Badge variant={getStatusVariant(zone.status)} size="small">
-                  {zone.status}
+                  {zone.status.charAt(0).toUpperCase() + zone.status.slice(1)}
                 </Badge>
               </View>
               <Text style={styles.plantCount}>
-                {zone.plantCount} plants • {zone.plantType}
+                {zone.plantCount} plant{zone.plantCount !== 1 ? "s" : ""}
               </Text>
             </View>
           </View>
         </View>
 
-        {showStats && (
-          <View style={styles.zoneStats}>
-            <View style={styles.statsGrid}>
-              <View style={styles.statItem}>
-                <Ionicons name="water-outline" size={14} color="#45aaf2" />
-                <Text style={styles.statValue}>{zone.averageWaterLevel}%</Text>
-                <Text style={styles.statLabel}>Water</Text>
-              </View>
+        {/* Basic zone info */}
+        <View style={styles.zoneStats}>
+          <View style={styles.statsGrid}>
+            <View style={styles.statItem}>
+              <Ionicons name="leaf-outline" size={14} color="#4caf50" />
+              <Text style={styles.statValue}>{zone.plantCount}</Text>
+              <Text style={styles.statLabel}>Plants</Text>
+            </View>
 
-              <View style={styles.statItem}>
-                <Ionicons name="sunny-outline" size={14} color="#f7b731" />
-                <Text style={styles.statValue}>{zone.averageLightLevel}%</Text>
-                <Text style={styles.statLabel}>Light</Text>
-              </View>
+            <View style={styles.statItem}>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={14}
+                color="#2ecc71"
+              />
+              <Text style={styles.statValue}>
+                {zone.plants.filter((p) => p.status === "optimal").length}
+              </Text>
+              <Text style={styles.statLabel}>Healthy</Text>
+            </View>
 
-              {zone.temperature && (
-                <View style={styles.statItem}>
-                  <Ionicons
-                    name="thermometer-outline"
-                    size={14}
-                    color="#e74c3c"
-                  />
-                  <Text style={styles.statValue}>{zone.temperature}°C</Text>
-                  <Text style={styles.statLabel}>Temp</Text>
-                </View>
-              )}
+            <View style={styles.statItem}>
+              <Ionicons name="warning-outline" size={14} color="#f39c12" />
+              <Text style={styles.statValue}>
+                {zone.plants.filter((p) => p.status === "warning").length}
+              </Text>
+              <Text style={styles.statLabel}>Warning</Text>
+            </View>
 
-              {zone.humidity && (
-                <View style={styles.statItem}>
-                  <Ionicons name="water-outline" size={14} color="#5dade2" />
-                  <Text style={styles.statValue}>{zone.humidity}%</Text>
-                  <Text style={styles.statLabel}>Humidity</Text>
-                </View>
-              )}
+            <View style={styles.statItem}>
+              <Ionicons name="alert-circle-outline" size={14} color="#e74c3c" />
+              <Text style={styles.statValue}>
+                {zone.plants.filter((p) => p.status === "critical").length}
+              </Text>
+              <Text style={styles.statLabel}>Critical</Text>
             </View>
           </View>
-        )}
-
-        {zone.lastUpdated && (
-          <Text style={styles.lastUpdated}>
-            Updated {zone.lastUpdated.toLocaleTimeString()}
-          </Text>
-        )}
+        </View>
 
         {/* Action indicator */}
         <View style={styles.actionIndicator}>
@@ -149,18 +124,6 @@ export function ZoneCard({
 const styles = StyleSheet.create({
   cardTouchable: {
     flex: 1,
-  },
-  smallCard: {
-    width: "45%",
-    marginBottom: 12,
-  },
-  mediumCard: {
-    width: "48%",
-    marginBottom: 16,
-  },
-  largeCard: {
-    width: "100%",
-    marginBottom: 16,
   },
   cardContent: {
     position: "relative",
@@ -217,12 +180,11 @@ const styles = StyleSheet.create({
   },
   statsGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "space-between",
   },
   statItem: {
     alignItems: "center",
-    width: "48%",
+    width: "23%",
     marginBottom: 4,
   },
   statValue: {
@@ -232,15 +194,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   statLabel: {
-    fontSize: 9,
+    fontSize: 8,
     color: "#666",
     marginTop: 1,
-  },
-  lastUpdated: {
-    fontSize: 9,
-    color: "#999",
-    textAlign: "center",
-    marginTop: 4,
   },
   actionIndicator: {
     position: "absolute",

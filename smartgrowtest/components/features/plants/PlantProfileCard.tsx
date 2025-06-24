@@ -1,17 +1,17 @@
-// components/features/plants/PlantProfileCard.tsx
+// components/features/plants/PlantProfileCard.tsx - Simplified for API data
 import React from "react";
-import { View, Text, StyleSheet, Image } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { Card } from "../../ui/Card";
 
 type PlantProfileCardProps = {
   name: string;
-  image: string;
+  icon: string;
   size?: "small" | "medium" | "large";
 };
 
 export function PlantProfileCard({
   name,
-  image,
+  icon,
   size = "medium",
 }: PlantProfileCardProps) {
   const cardStyle = {
@@ -20,49 +20,32 @@ export function PlantProfileCard({
     large: styles.largeCard,
   };
 
-  // Get local image source based on plant type
-  const getImageSource = () => {
-    if (image === "🌶️") {
-      return require("../../../assets/logo/chili.png");
-    }
-    if (image === "🍆") {
-      return require("../../../assets/logo/eggplant.png");
-    }
-    // Fallback to existing smartgrow logo if plant type unknown
-    return require("../../../assets/logo/smartgrow.png");
+  const iconSize = {
+    small: 40,
+    medium: 60,
+    large: 80,
   };
 
-  // Size configurations - more compact for better balance
-  const imageSize = {
-    small: 50,
-    medium: 70,
-    large: 90,
+  const nameSize = {
+    small: styles.smallName,
+    medium: styles.mediumName,
+    large: styles.largeName,
   };
 
   return (
     <View style={cardStyle[size]}>
       <Card variant="elevated" style={styles.cardContainer}>
         <View style={styles.content}>
-          {/* Local plant image */}
-          <View style={styles.imageContainer}>
-            <Image
-              source={getImageSource()}
-              style={[
-                styles.plantImage,
-                {
-                  width: imageSize[size],
-                  height: imageSize[size],
-                },
-              ]}
-              resizeMode="contain"
-            />
+          {/* Plant icon */}
+          <View style={styles.iconContainer}>
+            <Text style={[styles.plantIcon, { fontSize: iconSize[size] }]}>
+              {icon}
+            </Text>
           </View>
 
           {/* Plant name */}
           <View style={styles.nameContainer}>
-            <Text style={[styles.plantName, styles[`${size}Name`]]}>
-              {name}
-            </Text>
+            <Text style={[styles.plantName, nameSize[size]]}>{name}</Text>
           </View>
         </View>
       </Card>
@@ -76,12 +59,12 @@ const styles = StyleSheet.create({
     height: 140,
   },
   mediumCard: {
-    width: 150,
+    width: 160,
     height: 180,
   },
   largeCard: {
-    width: 180,
-    height: 200,
+    width: 200,
+    height: 220,
   },
   cardContainer: {
     height: "100%",
@@ -94,14 +77,14 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 12,
   },
-  imageContainer: {
+  iconContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
   },
-  plantImage: {
-    // Image dimensions are set dynamically above
+  plantIcon: {
+    // Size is set dynamically above
   },
   nameContainer: {
     alignItems: "center",

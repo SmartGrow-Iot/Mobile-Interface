@@ -1,6 +1,6 @@
-// components/features/zones/ZoneGrid.tsx - Updated for better 4-zone display
+// components/features/zones/ZoneGrid.tsx - Simplified for API data
 import React from "react";
-import { View, Text, StyleSheet, FlatList } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { Zone } from "../../../types/Zone";
 import { ZoneCard } from "./ZoneCard";
 
@@ -9,7 +9,6 @@ type ZoneGridProps = {
   onZonePress?: (zone: Zone) => void;
   numColumns?: number;
   cardSize?: "small" | "medium" | "large";
-  showStats?: boolean;
   title?: string;
 };
 
@@ -18,9 +17,14 @@ export function ZoneGrid({
   onZonePress,
   numColumns = 2,
   cardSize = "medium",
-  showStats = true,
   title = "All Zones",
 }: ZoneGridProps) {
+  // Calculate stats from actual zone data
+  const totalPlants = zones.reduce((sum, zone) => sum + zone.plantCount, 0);
+  const optimalZones = zones.filter((z) => z.status === "optimal").length;
+  const warningZones = zones.filter((z) => z.status === "warning").length;
+  const criticalZones = zones.filter((z) => z.status === "critical").length;
+
   return (
     <View style={styles.container}>
       {/* Section Title */}
@@ -33,21 +37,15 @@ export function ZoneGrid({
           <Text style={styles.statLabel}>Total Zones</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>
-            {zones.filter((z) => z.status === "Optimal").length}
-          </Text>
+          <Text style={styles.statValue}>{totalPlants}</Text>
+          <Text style={styles.statLabel}>Total Plants</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{optimalZones}</Text>
           <Text style={styles.statLabel}>Optimal</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>
-            {zones.filter((z) => z.status === "Warning").length}
-          </Text>
-          <Text style={styles.statLabel}>Warning</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>
-            {zones.filter((z) => z.status === "Critical").length}
-          </Text>
+          <Text style={styles.statValue}>{criticalZones}</Text>
           <Text style={styles.statLabel}>Critical</Text>
         </View>
       </View>
@@ -63,12 +61,7 @@ export function ZoneGrid({
               numColumns === 1 && { width: "100%" },
             ]}
           >
-            <ZoneCard
-              zone={zone}
-              onPress={onZonePress}
-              size={cardSize}
-              showStats={showStats}
-            />
+            <ZoneCard zone={zone} onPress={onZonePress} size={cardSize} />
           </View>
         ))}
       </View>
@@ -113,9 +106,6 @@ const styles = StyleSheet.create({
     color: "#666",
     fontWeight: "500",
   },
-  gridContainer: {
-    paddingBottom: 16,
-  },
   zonesContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -123,8 +113,5 @@ const styles = StyleSheet.create({
   },
   zoneWrapper: {
     marginBottom: 16,
-  },
-  row: {
-    justifyContent: "space-between",
   },
 });

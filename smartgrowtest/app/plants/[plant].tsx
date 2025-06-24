@@ -1,4 +1,4 @@
-// app/plants/[plant].tsx - Refactored with separated modal and service
+// app/plants/[plant].tsx - Updated to use only API data
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -12,54 +12,24 @@ import { Ionicons } from "@expo/vector-icons";
 import { apiRequest } from "@/services/api";
 import Header from "../../components/Header";
 
-// Import existing components
+// Import updated components
 import { PlantProfileCard } from "../../components/features/plants/PlantProfileCard";
-import { PlantThresholds } from "../../components/features/plants/PlantThresholds";
-import { PlantInfoCards } from "../../components/features/plants/PlantInfoCards";
+import { PlantInfoSection } from "../../components/features/plants/PlantInfoSection";
+import { PlantHardwareSection } from "../../components/features/plants/PlantHardwareSection";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 
-// Import new moisture threshold components
+// Import updated moisture threshold components
 import { MoistureThresholdModal } from "../../components/features/thresholds/MoistureThresholdModal";
 import { MoistureThresholdRange } from "../../services/moistureThresholdService";
 
-// Types based on API documentation
-interface PlantProfileResponse {
-  plantId: string;
-  name: string;
-  species: string;
-  zone: string;
-  moisturePin: number;
-  thresholds: {
-    moisture: { min: number; max: number };
-    temperature: { min: number; max: number };
-    humidity: { min: number; max: number };
-    light: { min: number; max: number };
-  };
-  zoneHardware: {
-    sensors: {
-      light: string;
-      temperature: string;
-      humidity: string;
-      moisture: string;
-      airQuality: string;
-    };
-    actuators: {
-      pump: string;
-      light: string;
-      fan: string;
-    };
-  };
-  status: "OPTIMAL" | "WARNING" | "CRITICAL";
-  createdAt: string;
-}
+// Import updated types
+import { PlantDetail, PlantHelpers } from "../../types/Plant";
 
 export default function PlantProfile() {
   const { plant } = useLocalSearchParams();
   const router = useRouter();
-  const [plantDetails, setPlantDetails] = useState<PlantProfileResponse | null>(
-    null
-  );
+  const [plantDetails, setPlantDetails] = useState<PlantDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,9 +48,7 @@ export default function PlantProfile() {
         }
 
         console.log("Fetching plant data for ID:", plant);
-        const plantData: PlantProfileResponse = await apiRequest(
-          `/plants/${plant}`
-        );
+        const plantData: PlantDetail = await apiRequest(`/plants/${plant}`);
         console.log("Fetched Plant Data:", plantData);
 
         setPlantDetails(plantData);
@@ -140,34 +108,6 @@ export default function PlantProfile() {
     }
   };
 
-  // Helper functions
-  const getZoneDisplayName = (zone: string): string => {
-    const zoneMap: Record<string, string> = {
-      zone1: "Zone 1",
-      zone2: "Zone 2",
-      zone3: "Zone 3",
-      zone4: "Zone 4",
-    };
-    return zoneMap[zone] || zone;
-  };
-
-  const getPlantIcon = (species: string | undefined, zone: string): string => {
-    const safeSpecies = species?.toLowerCase() || "";
-    if (safeSpecies.includes("chili") || safeSpecies.includes("pepper")) {
-      return "🌶️";
-    }
-    if (safeSpecies.includes("eggplant") || safeSpecies.includes("aubergine")) {
-      return "🍆";
-    }
-    if (zone === "zone1" || zone === "zone2") {
-      return "🌶️";
-    }
-    if (zone === "zone3" || zone === "zone4") {
-      return "🍆";
-    }
-    return "🌱";
-  };
-
   // Loading state
   if (loading) {
     return (
@@ -201,57 +141,11 @@ export default function PlantProfile() {
   const customBreadcrumbs = [
     { label: "Home", route: "/" },
     {
-      label: getZoneDisplayName(plantDetails.zone),
+      label: PlantHelpers.getZoneDisplayName(plantDetails.zone),
       route: `/plants/zone/${plantDetails.zone}`,
     },
     { label: plantDetails.name },
   ];
-
-  // Prepare threshold data for display
-  const thresholdData = [
-    {
-      label: "Moisture Level is",
-      value:
-        plantDetails.status === "OPTIMAL"
-          ? "Optimal"
-          : plantDetails.status === "WARNING"
-          ? "Warning"
-          : "Critical",
-      color:
-        plantDetails.status === "OPTIMAL"
-          ? "#27ae60"
-          : plantDetails.status === "WARNING"
-          ? "#f39c12"
-          : "#e74c3c",
-      bg:
-        plantDetails.status === "OPTIMAL"
-          ? "#e8f5e8"
-          : plantDetails.status === "WARNING"
-          ? "#fdf6e3"
-          : "#fdf2f2",
-      icon: "💧",
-    },
-    {
-      label: "Temperature is",
-      value: "Optimal",
-      color: "#27ae60",
-      bg: "#e8f5e8",
-      icon: "🌡️",
-    },
-  ];
-
-  // Prepare plant info
-  const plantInfo = {
-    datePlanted: new Date(plantDetails.createdAt).toLocaleDateString("en-GB"),
-    optimalMoisture: `${plantDetails.thresholds.moisture.min} - ${plantDetails.thresholds.moisture.max}%`,
-    optimalLight: `${plantDetails.thresholds.light.min} - ${plantDetails.thresholds.light.max}%`,
-    optimalTemp: `${plantDetails.thresholds.temperature.min} - ${plantDetails.thresholds.temperature.max}°C`,
-    type: plantDetails.species,
-    growthTime: "8-12 weeks",
-    notes: `Planted in ${getZoneDisplayName(
-      plantDetails.zone
-    )} with moisture sensor on pin ${plantDetails.moisturePin}`,
-  };
 
   return (
     <View style={styles.container}>
@@ -268,86 +162,76 @@ export default function PlantProfile() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Plant Card & Thresholds Section */}
+        {/* Plant Profile Card */}
         <View style={styles.topSection}>
           <PlantProfileCard
             name={plantDetails.name}
-            image={getPlantIcon(plantDetails.species, plantDetails.zone)}
-            size="medium"
+            icon={PlantHelpers.getPlantIcon(plantDetails.zone)}
+            size="large"
           />
-          <View style={styles.thresholdsContainer}>
-            <PlantThresholds
-              thresholds={thresholdData}
-              actuatorText="Override Actuator"
-              onActuatorPress={handleActuatorPress}
-            />
+        </View>
 
-            {/* Moisture Threshold Button */}
+        {/* Plant Status and Actions */}
+        <View style={styles.actionsSection}>
+          {/* Status Card */}
+          <View style={styles.statusCard}>
+            <View style={styles.statusHeader}>
+              <Ionicons
+                name="pulse-outline"
+                size={20}
+                color={
+                  plantDetails.status === "optimal"
+                    ? "#27ae60"
+                    : plantDetails.status === "warning"
+                    ? "#f39c12"
+                    : "#e74c3c"
+                }
+              />
+              <Text style={styles.statusTitle}>Plant Status</Text>
+            </View>
+            <Text
+              style={[
+                styles.statusValue,
+                {
+                  color:
+                    plantDetails.status === "optimal"
+                      ? "#27ae60"
+                      : plantDetails.status === "warning"
+                      ? "#f39c12"
+                      : "#e74c3c",
+                },
+              ]}
+            >
+              {plantDetails.status.charAt(0).toUpperCase() +
+                plantDetails.status.slice(1)}
+            </Text>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
             <TouchableOpacity
-              style={styles.moistureThresholdButton}
+              style={styles.primaryButton}
+              onPress={handleActuatorPress}
+            >
+              <Ionicons name="settings-outline" size={16} color="#fff" />
+              <Text style={styles.primaryButtonText}>Override Actuator</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.secondaryButton}
               onPress={handleMoistureThresholdPress}
             >
-              <View style={styles.moistureButtonContent}>
-                <Ionicons name="water-outline" size={16} color="#fff" />
-                <Text style={styles.moistureThresholdText}>
-                  Moisture Threshold
-                </Text>
-              </View>
+              <Ionicons name="water-outline" size={16} color="#3498db" />
+              <Text style={styles.secondaryButtonText}>Moisture Settings</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Plant Information Cards */}
-        <PlantInfoCards plantInfo={plantInfo} />
+        {/* Plant Information */}
+        <PlantInfoSection plant={plantDetails} />
 
         {/* Hardware Information */}
-        <View style={styles.hardwareSection}>
-          <View style={styles.hardwareCard}>
-            <View style={styles.hardwareHeader}>
-              <Text style={styles.hardwareTitle}>Zone Hardware</Text>
-              <Text style={styles.hardwareSubtitle}>
-                {getZoneDisplayName(plantDetails.zone)}
-              </Text>
-            </View>
-
-            <View style={styles.hardwareGrid}>
-              <View style={styles.hardwareItem}>
-                <Text style={styles.hardwareLabel}>Sensors</Text>
-                <Text style={styles.hardwareValue}>
-                  Light:{" "}
-                  {plantDetails.zoneHardware.sensors.light?.slice(-4) || "N/A"}
-                </Text>
-                <Text style={styles.hardwareValue}>
-                  Moisture:{" "}
-                  {plantDetails.zoneHardware.sensors.moisture?.slice(-4) ||
-                    "N/A"}
-                </Text>
-                <Text style={styles.hardwareValue}>
-                  Temp:{" "}
-                  {plantDetails.zoneHardware.sensors.temperature?.slice(-4) ||
-                    "N/A"}
-                </Text>
-              </View>
-
-              <View style={styles.hardwareItem}>
-                <Text style={styles.hardwareLabel}>Actuators</Text>
-                <Text style={styles.hardwareValue}>
-                  Pump:{" "}
-                  {plantDetails.zoneHardware.actuators.pump?.slice(-4) || "N/A"}
-                </Text>
-                <Text style={styles.hardwareValue}>
-                  Light:{" "}
-                  {plantDetails.zoneHardware.actuators.light?.slice(-4) ||
-                    "N/A"}
-                </Text>
-                <Text style={styles.hardwareValue}>
-                  Fan:{" "}
-                  {plantDetails.zoneHardware.actuators.fan?.slice(-4) || "N/A"}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
+        <PlantHardwareSection plant={plantDetails} />
       </ScrollView>
 
       {/* Moisture Threshold Modal */}
@@ -357,7 +241,7 @@ export default function PlantProfile() {
           onClose={handleMoistureModalClose}
           plantId={plantDetails.plantId}
           plantName={plantDetails.name}
-          plantIcon={getPlantIcon(plantDetails.species, plantDetails.zone)}
+          plantIcon={PlantHelpers.getPlantIcon(plantDetails.zone)}
           zone={plantDetails.zone}
           moisturePin={plantDetails.moisturePin}
           currentThresholds={plantDetails.thresholds.moisture}
@@ -380,79 +264,77 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   topSection: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 20,
     marginBottom: 20,
   },
-  thresholdsContainer: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  // Moisture Threshold Button Styles
-  moistureThresholdButton: {
-    backgroundColor: "#3498db",
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  moistureButtonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  moistureThresholdText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 14,
-    marginLeft: 6,
-  },
-  hardwareSection: {
+  actionsSection: {
     paddingHorizontal: 20,
-    marginTop: 20,
+    marginBottom: 20,
   },
-  hardwareCard: {
+  statusCard: {
     backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
-  hardwareHeader: {
-    marginBottom: 16,
-  },
-  hardwareTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#174d3c",
-    marginBottom: 4,
-  },
-  hardwareSubtitle: {
-    fontSize: 14,
-    color: "#666",
-  },
-  hardwareGrid: {
+  statusHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  hardwareItem: {
-    flex: 1,
-    marginHorizontal: 8,
-  },
-  hardwareLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
+    alignItems: "center",
     marginBottom: 8,
   },
-  hardwareValue: {
-    fontSize: 12,
-    color: "#666",
-    marginBottom: 4,
-    fontFamily: "monospace",
+  statusTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    marginLeft: 8,
+  },
+  statusValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  primaryButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#27ae60",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  primaryButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 14,
+    marginLeft: 6,
+  },
+  secondaryButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#3498db",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  secondaryButtonText: {
+    color: "#3498db",
+    fontWeight: "bold",
+    fontSize: 14,
+    marginLeft: 6,
   },
 });
