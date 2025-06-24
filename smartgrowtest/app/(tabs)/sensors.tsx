@@ -13,7 +13,7 @@ import Header from "../../components/Header";
 // Updated sensors list to match the environmental data API
 const sensors = [
   { label: "Light Sensor", icon: "☀️", route: "light" },
-  { label: "Soil Moisture Sensor", icon: "🟫", route: "soil" }, // Updated from "Soil Sensor"
+  { label: "Soil Moisture Sensor", icon: "🟫", route: "soil" },
   { label: "Air Quality Sensor", icon: "🌬️", route: "airquality" },
   { label: "Temperature Sensor", icon: "🌡️", route: "temperature" },
   { label: "Humidity Sensor", icon: "💧", route: "humidity" },
@@ -41,18 +41,34 @@ export default function SensorsScreen() {
             <Text style={styles.sensorIcon}>{sensor.icon}</Text>
             <View style={styles.sensorInfo}>
               <Text style={styles.sensorLabel}>{sensor.label}</Text>
-              <Text style={styles.sensorSubtext}>View data from zones 1-4</Text>
+              <Text style={styles.sensorSubtext}>
+                {sensor.route === "soil"
+                  ? "Monitor soil moisture by plant and zone"
+                  : "View environmental data from all zones"}
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
         ))}
 
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Environmental Monitoring</Text>
-          <Text style={styles.infoText}>
-            All sensors collect data automatically and provide real-time
-            insights into your plant growing conditions across all zones.
-          </Text>
+          <Text style={styles.infoTitle}>Sensor Types</Text>
+          <View style={styles.infoContent}>
+            <View style={styles.infoSection}>
+              <Text style={styles.infoSectionTitle}>Environmental Sensors</Text>
+              <Text style={styles.infoText}>
+                Light, Temperature, Humidity, and Air Quality sensors provide
+                environmental data shared across all zones.
+              </Text>
+            </View>
+            <View style={styles.infoSection}>
+              <Text style={styles.infoSectionTitle}>Soil Moisture Sensors</Text>
+              <Text style={styles.infoText}>
+                Individual plant monitoring with zone-specific and pin-specific
+                data for precise soil moisture tracking.
+              </Text>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -124,7 +140,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#174d3c",
-    marginBottom: 8,
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  infoContent: {
+    gap: 16,
+  },
+  infoSection: {
+    gap: 8,
+  },
+  infoSectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
   },
   infoText: {
     fontSize: 14,
