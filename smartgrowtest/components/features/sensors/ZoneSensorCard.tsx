@@ -1,4 +1,4 @@
-// components/features/sensors/ZoneSensorCard.tsx
+// components/features/sensors/ZoneSensorCard.tsx - Updated with soil moisture support
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -144,7 +144,8 @@ export function ZoneSensorCard({
           </View>
 
           {/* Soil moisture details (only for soil sensors) */}
-          {zoneData.soilMoistureDetails &&
+          {sensorType === "soil" &&
+            zoneData.soilMoistureDetails &&
             zoneData.soilMoistureDetails.length > 0 && (
               <View style={styles.soilDetailsContainer}>
                 <Text style={styles.soilDetailsTitle}>Moisture by Pin:</Text>

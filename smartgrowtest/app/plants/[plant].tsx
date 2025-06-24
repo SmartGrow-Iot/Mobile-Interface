@@ -1,6 +1,6 @@
-// app/plants/[plant].tsx - Updated PlantProfile component
-import React, { useState, useEffect, act } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+// app/plants/[plant].tsx - Updated to use API documentation 4.2 Get Plant Profile
+import React, { useState, useEffect } from "react";
+import { View, StyleSheet, ScrollView, Text } from "react-native"; // Added Text import
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { apiRequest } from "@/services/api";
 import Header from "../../components/Header";
@@ -9,107 +9,85 @@ import Header from "../../components/Header";
 import { PlantProfileCard } from "../../components/features/plants/PlantProfileCard";
 import { PlantThresholds } from "../../components/features/plants/PlantThresholds";
 import { PlantInfoCards } from "../../components/features/plants/PlantInfoCards";
-import { PlantReadings } from "../../components/features/plants/PlantReadings";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 
-// Import data
-import { getPlantDetails } from "../../data/plantDetails";
-import { PlantDetail } from "@/types/Plant";
-
-type Plant = {
+// Types based on API documentation 4.2 Get Plant Profile
+interface PlantProfileResponse {
   plantId: string;
   name: string;
-  status: "Optimal" | "Critical";
-  waterLevel: number;
-  lightLevel: number;
-};
-
-const plantsTempIdFromFirestore: Record<string, Plant> = {
-  "plant_iKjnBJcBaGTx6LyCXUy2" : {
-      plantId: "plant_iKjnBJcBaGTx6LyCXUy2",
-      name: "",
-      status: "Optimal",
-      waterLevel: 80,
-      lightLevel: 70,
-  },
-  "plant_hG7bPH7Np9WXtDe1zBVE" : {
-      plantId: "plant_hG7bPH7Np9WXtDe1zBVE",
-      name: "",
-      status: "Optimal",
-      waterLevel: 80,
-      lightLevel: 70,
-  },
-  "plant_ZTMJl94GubdbY8T6U4i9" : {
-      plantId: "plant_ZTMJl94GubdbY8T6U4i9",
-      name: "",
-      status: "Optimal",
-      waterLevel: 80,
-      lightLevel: 70,
-  },
-  "plant_SJQugVvNBWXmlz9uCq5X" : {
-      plantId: "plant_SJQugVvNBWXmlz9uCq5X",
-      name: "",
-      status: "Critical",
-      waterLevel: 80,
-      lightLevel: 70,
-  },
-  "plant_O51I3DvK6R0qygm5k5R9" : {
-      plantId: "plant_O51I3DvK6R0qygm5k5R9",
-      name: "",
-      status: "Optimal",
-      waterLevel: 80,
-      lightLevel: 70,
-  },
-  "plant_JU4Rj78DEHUM2lNYHzd3" : {
-      plantId: "plant_JU4Rj78DEHUM2lNYHzd3",
-      name: "",
-      status: "Optimal",
-      waterLevel: 80,
-      lightLevel: 70,
-  },
-  "plant_CyhF06FW5a1KTmCvM0zf" : {
-      plantId: "plant_CyhF06FW5a1KTmCvM0zf",
-      name: "",
-      status: "Critical",
-      waterLevel: 80,
-      lightLevel: 70,
-  },
+  species: string;
+  zone: string;
+  moisturePin: number;
+  thresholds: {
+    moisture: { min: number; max: number };
+    temperature: { min: number; max: number };
+    humidity: { min: number; max: number };
+    light: { min: number; max: number };
+  };
+  zoneHardware: {
+    sensors: {
+      light: string;
+      temperature: string;
+      humidity: string;
+      moisture: string;
+      airQuality: string;
+    };
+    actuators: {
+      pump: string;
+      light: string;
+      fan: string;
+    };
+  };
+  status: "OPTIMAL" | "WARNING" | "CRITICAL";
+  createdAt: string; // ISO8601 timestamp
 }
 
 export default function PlantProfile() {
   const { plant } = useLocalSearchParams();
-  console.log('Curretn Plant Id: ', plant)
   const router = useRouter();
-  const [plantDetails, setPlantDetails] = useState<PlantDetail>();
+  const [plantDetails, setPlantDetails] = useState<PlantProfileResponse | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-  const fetchPlant = async () => {
-    try {
-      setLoading(true);
-      if (!plant) return; // ensure plant ID is available
-      const plantData = await apiRequest(`/plants/${plant}`);
-      console.log('Fetched Plant Data: ', plantData)
-      setPlantDetails(plantData); // since apiRequest already returns parsed data
-    } catch (error) {
-      console.error('Error fetching plant:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchPlant = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  fetchPlant();
-}, [plant]);
+        if (!plant) {
+          setError("Plant ID is required");
+          return;
+        }
 
-  const plantKey = typeof plant === "string" ? plant.trim() : "";
-  console.log(plantDetails)
-  const data = plantDetails;
+        console.log("Fetching plant data for ID:", plant);
+
+        // Use API 4.2: GET /v1/plants/{plant_id}
+        const plantData: PlantProfileResponse = await apiRequest(
+          `/plants/${plant}`
+        );
+        console.log("Fetched Plant Data:", plantData);
+
+        setPlantDetails(plantData);
+      } catch (error) {
+        console.error("Error fetching plant:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to fetch plant data"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPlant();
+  }, [plant]);
 
   // Handle actuator override - navigate to actuator override page
   const handleActuatorPress = () => {
     if (plantDetails) {
-      // Pass both zone and plant information to the actuator override page
       router.push({
         pathname: "/actuator/override",
         params: {
@@ -121,10 +99,43 @@ export default function PlantProfile() {
     }
   };
 
-  // Loading state (you could add actual loading logic here)
-  const isLoading = false;
+  // Format zone display name
+  const getZoneDisplayName = (zone: string): string => {
+    const zoneMap: Record<string, string> = {
+      zone1: "Zone 1",
+      zone2: "Zone 2",
+      zone3: "Zone 3",
+      zone4: "Zone 4",
+    };
+    return zoneMap[zone] || zone;
+  };
 
-  if (isLoading) {
+  // Get plant icon based on species or zone
+  const getPlantIcon = (species: string, zone: string): string => {
+    if (
+      species.toLowerCase().includes("chili") ||
+      species.toLowerCase().includes("pepper")
+    ) {
+      return "🌶️";
+    }
+    if (
+      species.toLowerCase().includes("eggplant") ||
+      species.toLowerCase().includes("aubergine")
+    ) {
+      return "🍆";
+    }
+    // Fallback based on zone
+    if (zone === "zone1" || zone === "zone2") {
+      return "🌶️";
+    }
+    if (zone === "zone3" || zone === "zone4") {
+      return "🍆";
+    }
+    return "🌱"; // Default
+  };
+
+  // Loading state
+  if (loading) {
     return (
       <View style={styles.container}>
         <Header title="Plant Profile" showBackButton={true} />
@@ -133,7 +144,8 @@ export default function PlantProfile() {
     );
   }
 
-  if (!plantDetails) {
+  // Error state
+  if (error || !plantDetails) {
     return (
       <View style={styles.container}>
         <Header title="Plant Not Found" showBackButton={true} />
@@ -141,7 +153,10 @@ export default function PlantProfile() {
           <EmptyState
             icon="leaf-outline"
             title="Plant not found"
-            subtitle={`The plant with ID "${plantKey}" doesn't exist or may have been removed.`}
+            subtitle={
+              error ||
+              `The plant with ID "${plant}" doesn't exist or may have been removed.`
+            }
           />
         </View>
       </View>
@@ -151,9 +166,58 @@ export default function PlantProfile() {
   // Custom breadcrumbs for details page
   const customBreadcrumbs = [
     { label: "Home", route: "/" },
-    { label: 'A', route: `/plants/zone/A` },
+    {
+      label: getZoneDisplayName(plantDetails.zone),
+      route: `/plants/zone/${plantDetails.zone}`,
+    },
     { label: plantDetails.name },
   ];
+
+  // Prepare threshold data for display
+  const thresholdData = [
+    {
+      label: "Moisture Level is",
+      value:
+        plantDetails.status === "OPTIMAL"
+          ? "Optimal"
+          : plantDetails.status === "WARNING"
+          ? "Warning"
+          : "Critical",
+      color:
+        plantDetails.status === "OPTIMAL"
+          ? "#27ae60"
+          : plantDetails.status === "WARNING"
+          ? "#f39c12"
+          : "#e74c3c",
+      bg:
+        plantDetails.status === "OPTIMAL"
+          ? "#e8f5e8"
+          : plantDetails.status === "WARNING"
+          ? "#fdf6e3"
+          : "#fdf2f2",
+      icon: "💧",
+    },
+    {
+      label: "Temperature is",
+      value: "Optimal", // Default since we don't have real-time data
+      color: "#27ae60",
+      bg: "#e8f5e8",
+      icon: "🌡️",
+    },
+  ];
+
+  // Prepare plant info for display
+  const plantInfo = {
+    datePlanted: new Date(plantDetails.createdAt).toLocaleDateString("en-GB"),
+    optimalMoisture: `${plantDetails.thresholds.moisture.min} - ${plantDetails.thresholds.moisture.max}%`,
+    optimalLight: `${plantDetails.thresholds.light.min} - ${plantDetails.thresholds.light.max}%`,
+    optimalTemp: `${plantDetails.thresholds.temperature.min} - ${plantDetails.thresholds.temperature.max}°C`,
+    type: plantDetails.species,
+    growthTime: "8-12 weeks", // Default value
+    notes: `Planted in ${getZoneDisplayName(
+      plantDetails.zone
+    )} with moisture sensor on pin ${plantDetails.moisturePin}`,
+  };
 
   return (
     <View style={styles.container}>
@@ -172,47 +236,71 @@ export default function PlantProfile() {
       >
         {/* Plant Card & Thresholds Section */}
         <View style={styles.topSection}>
-          <PlantProfileCard name={plantDetails.name} image={"🌶️"} size="medium" />
+          <PlantProfileCard
+            name={plantDetails.name}
+            image={getPlantIcon(plantDetails.species, plantDetails.zone)}
+            size="medium"
+          />
           <View style={styles.thresholdsContainer}>
             <PlantThresholds
-              thresholds={
-                [
-                  {
-                    label: "Light Threshold is",
-                    value: "Optimal",
-                    color: "#222",
-                    bg: "#f5f5f5",
-                    icon: "☀️",
-                  },
-                  {
-                    label: "Water Threshold is",
-                    value: "Critical",
-                    color: "red",
-                    bg: "#fff",
-                    icon: "💧",
-                  },
-                ]
-              }
-              actuatorText={"Override Actuator"}
+              thresholds={thresholdData}
+              actuatorText="Override Actuator"
               onActuatorPress={handleActuatorPress}
             />
           </View>
         </View>
 
-        <PlantInfoCards 
-          plantInfo={{
-            datePlanted: new Date(plantDetails.createdAt).toLocaleDateString('en-GB'),
-            optimalMoisture: plantDetails.thresholds.moisture.min+' - '+plantDetails.thresholds.moisture.max+' %',
-            optimalLight: plantDetails.thresholds.light.min+' - '+plantDetails.thresholds.light.max+' %',
-            optimalTemp: plantDetails.thresholds.temperature.min+' - '+plantDetails.thresholds.temperature.max+' C',
-            type: plantDetails.type,
-            growthTime: plantDetails.growthTime,
-            notes: plantDetails.description || "",
-          }}
-        />
+        {/* Plant Information Cards */}
+        <PlantInfoCards plantInfo={plantInfo} />
 
-        {/* Sensor Readings */}
-        {/* <PlantReadings readings={data.readings} /> */}
+        {/* Hardware Information */}
+        <View style={styles.hardwareSection}>
+          <View style={styles.hardwareCard}>
+            <View style={styles.hardwareHeader}>
+              <Text style={styles.hardwareTitle}>Zone Hardware</Text>
+              <Text style={styles.hardwareSubtitle}>
+                {getZoneDisplayName(plantDetails.zone)}
+              </Text>
+            </View>
+
+            <View style={styles.hardwareGrid}>
+              <View style={styles.hardwareItem}>
+                <Text style={styles.hardwareLabel}>Sensors</Text>
+                <Text style={styles.hardwareValue}>
+                  Light:{" "}
+                  {plantDetails.zoneHardware.sensors.light?.slice(-4) || "N/A"}
+                </Text>
+                <Text style={styles.hardwareValue}>
+                  Moisture:{" "}
+                  {plantDetails.zoneHardware.sensors.moisture?.slice(-4) ||
+                    "N/A"}
+                </Text>
+                <Text style={styles.hardwareValue}>
+                  Temp:{" "}
+                  {plantDetails.zoneHardware.sensors.temperature?.slice(-4) ||
+                    "N/A"}
+                </Text>
+              </View>
+
+              <View style={styles.hardwareItem}>
+                <Text style={styles.hardwareLabel}>Actuators</Text>
+                <Text style={styles.hardwareValue}>
+                  Pump:{" "}
+                  {plantDetails.zoneHardware.actuators.pump?.slice(-4) || "N/A"}
+                </Text>
+                <Text style={styles.hardwareValue}>
+                  Light:{" "}
+                  {plantDetails.zoneHardware.actuators.light?.slice(-4) ||
+                    "N/A"}
+                </Text>
+                <Text style={styles.hardwareValue}>
+                  Fan:{" "}
+                  {plantDetails.zoneHardware.actuators.fan?.slice(-4) || "N/A"}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </View>
   );
@@ -239,5 +327,51 @@ const styles = StyleSheet.create({
   thresholdsContainer: {
     flex: 1,
     marginLeft: 12,
+  },
+  hardwareSection: {
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  hardwareCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  hardwareHeader: {
+    marginBottom: 16,
+  },
+  hardwareTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#174d3c",
+    marginBottom: 4,
+  },
+  hardwareSubtitle: {
+    fontSize: 14,
+    color: "#666",
+  },
+  hardwareGrid: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  hardwareItem: {
+    flex: 1,
+    marginHorizontal: 8,
+  },
+  hardwareLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 8,
+  },
+  hardwareValue: {
+    fontSize: 12,
+    color: "#666",
+    marginBottom: 4,
+    fontFamily: "monospace",
   },
 });

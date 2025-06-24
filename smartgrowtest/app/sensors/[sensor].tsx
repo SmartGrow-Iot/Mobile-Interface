@@ -1,4 +1,4 @@
-// app/sensors/[sensor].tsx - Updated with correct API endpoints
+// app/sensors/[sensor].tsx - Updated with correct API endpoints from documentation
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, Alert, RefreshControl } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -12,15 +12,22 @@ import { ZoneSensorsList } from "../../components/features/sensors/ZoneSensorsLi
 import { EmptyState } from "../../components/ui/EmptyState";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 
-// Types for sensor data from API
-interface EnvironmentalSensorData {
-  id: string;
-  sensorType: string;
-  value: number;
-  unit: string;
-  timestamp: string;
+// Types for sensor data from API (based on 3.2 get_environmental_data)
+interface EnvironmentalDataResponse {
+  recordId: string;
   zoneId: string;
-  isActive: boolean;
+  timestamp: string; // ISO 8601 format
+  zoneSensors: {
+    humidity: number;
+    temp: number;
+    light: number;
+    airQuality: number;
+  };
+  soilMoistureByPin: Array<{
+    pin: number;
+    soilMoisture: number;
+  }>;
+  userId: string;
 }
 
 interface ProcessedZoneData {
@@ -33,9 +40,14 @@ interface ProcessedZoneData {
   critical: boolean;
   icon: string;
   lastUpdated: Date;
+  soilMoistureDetails?: Array<{
+    pin: number;
+    moisture: number;
+    critical: boolean;
+  }>;
 }
 
-// Sensor configuration mapping
+// Sensor configuration mapping (updated to match API sensor types)
 const sensorConfigs: Record<
   string,
   {
@@ -43,7 +55,7 @@ const sensorConfigs: Record<
     icon: string;
     description: string;
     unit: string;
-    apiType: string; // API sensor type mapping
+    apiField: keyof EnvironmentalDataResponse["zoneSensors"] | "soilMoisture"; // API field mapping
     thresholds: { min: number; max: number; critical: number };
   }
 > = {
@@ -52,7 +64,7 @@ const sensorConfigs: Record<
     icon: "🌡️",
     description: "Monitor ambient temperature for optimal plant growth",
     unit: "°C",
-    apiType: "temp",
+    apiField: "temp",
     thresholds: { min: 18, max: 32, critical: 35 },
   },
   humidity: {
@@ -60,7 +72,7 @@ const sensorConfigs: Record<
     icon: "💧",
     description: "Track relative humidity levels in growing environment",
     unit: "%",
-    apiType: "humidity",
+    apiField: "humidity",
     thresholds: { min: 40, max: 80, critical: 20 },
   },
   light: {
@@ -68,7 +80,7 @@ const sensorConfigs: Record<
     icon: "☀️",
     description: "Monitor light intensity for photosynthesis optimization",
     unit: "%",
-    apiType: "light",
+    apiField: "light",
     thresholds: { min: 30, max: 90, critical: 20 },
   },
   airquality: {
@@ -76,8 +88,16 @@ const sensorConfigs: Record<
     icon: "🌬️",
     description: "Monitor air quality and environmental conditions",
     unit: "ppm",
-    apiType: "air_quality",
+    apiField: "airQuality",
     thresholds: { min: 300, max: 600, critical: 1000 },
+  },
+  soil: {
+    name: "Soil Moisture Sensor",
+    icon: "🟫",
+    description: "Monitor soil moisture levels for optimal plant hydration",
+    unit: "%",
+    apiField: "soilMoisture",
+    thresholds: { min: 30, max: 70, critical: 20 },
   },
 };
 
@@ -130,7 +150,7 @@ export default function SensorDetail() {
   const sensorType = typeof sensor === "string" ? sensor : "";
   const sensorConfig = sensorConfigs[sensorType];
 
-  // Fetch environmental data for specific sensor type across all zones
+  // Fetch environmental data using API 3.2 get_environmental_data
   const fetchEnvironmentalData = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
 
@@ -141,23 +161,23 @@ export default function SensorDetail() {
         throw new Error(`Invalid sensor type: ${sensorType}`);
       }
 
-      // Fetch sensors of the specific type
-      const response = await apiRequest(
-        `/sensors?sensor_type=${sensorConfig.apiType}`
+      // Use API 3.2: GET /api/v1/logs/sensor-data with latest=true to get latest record per zone
+      const response: EnvironmentalDataResponse[] = await apiRequest(
+        `/logs/sensor-data?latest=true&limit=100`
       );
-      const sensorData: EnvironmentalSensorData[] = Array.isArray(response)
-        ? response
-        : [];
 
-      console.log(`Found ${sensorData.length} ${sensorConfig.apiType} sensors`);
+      console.log(`Found ${response.length} environmental data records`);
 
-      if (sensorData.length === 0) {
+      if (response.length === 0) {
         setZoneData([]);
         return;
       }
 
-      // Process the sensor data by zone
-      const processedData = processSensorDataByZone(sensorData, sensorType);
+      // Process the environmental data by zone for the specific sensor type
+      const processedData = processEnvironmentalDataByZone(
+        response,
+        sensorType
+      );
       setZoneData(processedData);
     } catch (error) {
       console.error("Error fetching environmental data:", error);
@@ -172,41 +192,71 @@ export default function SensorDetail() {
     }
   };
 
-  // Process sensor data and group by zones
-  const processSensorDataByZone = (
-    sensorData: EnvironmentalSensorData[],
+  // Process environmental data and group by zones for specific sensor type
+  const processEnvironmentalDataByZone = (
+    environmentalData: EnvironmentalDataResponse[],
     sensorType: string
   ): ProcessedZoneData[] => {
-    // Group sensors by zone and get the latest reading for each zone
-    const zoneMap = new Map<string, EnvironmentalSensorData>();
+    const processedZones: ProcessedZoneData[] = [];
+    const config = sensorConfigs[sensorType];
 
-    sensorData.forEach((sensor) => {
-      if (sensor.isActive) {
-        const existing = zoneMap.get(sensor.zoneId);
-        // Keep the most recent reading for each zone
-        if (
-          !existing ||
-          new Date(sensor.timestamp) > new Date(existing.timestamp)
-        ) {
-          zoneMap.set(sensor.zoneId, sensor);
-        }
+    // Group by zone and get the latest reading for each zone
+    const zoneMap = new Map<string, EnvironmentalDataResponse>();
+
+    environmentalData.forEach((record) => {
+      const existing = zoneMap.get(record.zoneId);
+      // Keep the most recent reading for each zone
+      if (
+        !existing ||
+        new Date(record.timestamp) > new Date(existing.timestamp)
+      ) {
+        zoneMap.set(record.zoneId, record);
       }
     });
 
-    // Convert to ProcessedZoneData format
-    const processedZones: ProcessedZoneData[] = [];
+    // Convert to ProcessedZoneData format based on sensor type
+    zoneMap.forEach((record, zoneId) => {
+      let value: number;
+      let displayValue: string;
+      let soilMoistureDetails:
+        | Array<{ pin: number; moisture: number; critical: boolean }>
+        | undefined;
 
-    zoneMap.forEach((sensor, zoneId) => {
+      // Extract value based on sensor type
+      if (sensorType === "soil") {
+        // For soil moisture, calculate average from all pins
+        const totalMoisture = record.soilMoistureByPin.reduce(
+          (sum, pin) => sum + pin.soilMoisture,
+          0
+        );
+        value = totalMoisture / record.soilMoistureByPin.length;
+        displayValue = `${Math.round(value)}${config.unit}`;
+
+        // Include detailed pin data for soil moisture
+        soilMoistureDetails = record.soilMoistureByPin.map((pin) => ({
+          pin: pin.pin,
+          moisture: pin.soilMoisture,
+          critical: isCriticalValue(pin.soilMoisture, sensorType),
+        }));
+      } else {
+        // For other sensor types, get value from zoneSensors
+        const apiField =
+          config.apiField as keyof EnvironmentalDataResponse["zoneSensors"];
+        value = record.zoneSensors[apiField];
+        displayValue = `${value}${config.unit}`;
+      }
+
       processedZones.push({
         id: `${zoneId}-${sensorType}`,
         zoneId: zoneId,
         zoneName: getZoneDisplayName(zoneId),
         sensorType: sensorType,
-        value: `${sensor.value}${sensor.unit || sensorConfig?.unit || ""}`,
-        rawValue: sensor.value,
-        critical: isCriticalValue(sensor.value, sensorType),
+        value: displayValue,
+        rawValue: value,
+        critical: isCriticalValue(value, sensorType),
         icon: getZoneIcon(zoneId),
-        lastUpdated: new Date(sensor.timestamp),
+        lastUpdated: new Date(record.timestamp),
+        soilMoistureDetails,
       });
     });
 
