@@ -13,7 +13,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../contexts/AuthContext";
 import { userService } from "../../services/userService";
-import { useNotifications } from "../../hooks/useNotifications";
 import { apiRequest } from "../../services/api";
 import { plantService } from "../../services/plantService";
 import Header from "../../components/Header";
@@ -37,7 +36,6 @@ interface CustomDropdownProps {
 export default function ProfileScreen() {
   const { logout, user } = useAuth();
   const router = useRouter();
-  const { unreadCount } = useNotifications();
   const [showAddPlant, setShowAddPlant] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
 
@@ -80,7 +78,7 @@ export default function ProfileScreen() {
 
   const plantTypeOptions: DropdownOption[] = [
     { label: "Chilli", value: "chilli" },
-    { label: "Eggplant", value: "eggplant" }
+    { label: "Eggplant", value: "eggplant" },
   ];
 
   // Custom Dropdown Component
@@ -278,11 +276,6 @@ export default function ProfileScreen() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Navigate to notifications screen
-  const handleNotificationsPress = () => {
-    router.push("/notifications");
   };
 
   // Load profile data when component mounts
@@ -564,7 +557,7 @@ export default function ProfileScreen() {
     );
   }
 
-  // Main Profile View (unchanged)
+  // Main Profile View
   return (
     <View style={styles.container}>
       <Header title="Profile" showSearch={true} />
@@ -623,42 +616,6 @@ export default function ProfileScreen() {
                 <Ionicons name="add-circle-outline" size={24} color="#174d3c" />
               </View>
               <Text style={styles.menuText}>Add Plant</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleNotificationsPress}
-          >
-            <View style={styles.menuItemLeft}>
-              <View
-                style={[
-                  styles.menuIconContainer,
-                  { backgroundColor: "#fff3e0" },
-                ]}
-              >
-                <View style={styles.notificationIconWrapper}>
-                  <Ionicons
-                    name="notifications-outline"
-                    size={24}
-                    color="#f57c00"
-                  />
-                  {unreadCount > 0 && (
-                    <View style={styles.notificationBadge}>
-                      <Text style={styles.notificationBadgeText}>
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-              <View style={styles.notificationTextContainer}>
-                <Text style={styles.menuText}>Notifications</Text>
-                {unreadCount > 0 && (
-                  <Text style={styles.unreadText}>{unreadCount} unread</Text>
-                )}
-              </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#666" />
           </TouchableOpacity>
@@ -767,39 +724,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
     fontWeight: "500",
-  },
-
-  // Notification-specific styles
-  notificationIconWrapper: {
-    position: "relative",
-  },
-  notificationBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: "#ff4444",
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-    borderWidth: 1,
-    borderColor: "#fff",
-  },
-  notificationBadgeText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "bold",
-  },
-  notificationTextContainer: {
-    flex: 1,
-  },
-  unreadText: {
-    fontSize: 12,
-    color: "#f57c00",
-    fontWeight: "500",
-    marginTop: 2,
   },
 
   logoutButton: {
