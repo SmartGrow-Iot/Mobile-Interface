@@ -1,4 +1,3 @@
-// app/sensors/[sensor].tsx - Updated with correct API endpoints from documentation
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, Alert, RefreshControl } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -12,11 +11,11 @@ import { ZoneSensorsList } from "../../components/features/sensors/ZoneSensorsLi
 import { EmptyState } from "../../components/ui/EmptyState";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 
-// Types for sensor data from API (based on 3.2 get_environmental_data)
+// Types for sensor data from API
 interface EnvironmentalDataResponse {
   recordId: string;
   zoneId: string;
-  timestamp: string; // ISO 8601 format
+  timestamp: string;
   zoneSensors: {
     humidity: number;
     temp: number;
@@ -47,7 +46,7 @@ interface ProcessedZoneData {
   }>;
 }
 
-// Sensor configuration mapping (updated to match API sensor types)
+// Sensor configuration mapping
 const sensorConfigs: Record<
   string,
   {
@@ -55,136 +54,47 @@ const sensorConfigs: Record<
     icon: string;
     description: string;
     unit: string;
-    apiField: keyof EnvironmentalDataResponse["zoneSensors"] | "soilMoisture"; // API field mapping
+    apiField: keyof EnvironmentalDataResponse["zoneSensors"] | "soilMoisture";
     thresholds: { min: number; max: number; critical: number };
   }
 > = {
-  temperature: {
-    name: "Temperature Sensor",
-    icon: "🌡️",
-    description: "Monitor ambient temperature for optimal plant growth",
-    unit: "°C",
-    apiField: "temp",
-    thresholds: { min: 18, max: 32, critical: 35 },
-  },
-  humidity: {
-    name: "Humidity Sensor",
-    icon: "💧",
-    description: "Track relative humidity levels in growing environment",
-    unit: "%",
-    apiField: "humidity",
-    thresholds: { min: 40, max: 80, critical: 20 },
-  },
-  light: {
-    name: "Light Sensor",
-    icon: "☀️",
-    description: "Monitor light intensity for photosynthesis optimization",
-    unit: "%",
-    apiField: "light",
-    thresholds: { min: 30, max: 90, critical: 20 },
-  },
-  airquality: {
-    name: "Air Quality Sensor",
-    icon: "🌬️",
-    description: "Monitor air quality and environmental conditions",
-    unit: "ppm",
-    apiField: "airQuality",
-    thresholds: { min: 300, max: 600, critical: 1000 },
-  },
-  soil: {
-    name: "Soil Moisture Sensor",
-    icon: "🟫",
-    description: "Monitor soil moisture levels for optimal plant hydration",
-    unit: "%",
-    apiField: "soilMoisture",
-    thresholds: { min: 30, max: 70, critical: 20 },
-  },
+  temperature: { name: "Temperature Sensor", icon: "🌡️", description: "Monitor ambient temperature for optimal plant growth", unit: "°C", apiField: "temp", thresholds: { min: 18, max: 32, critical: 35 } },
+  humidity:    { name: "Humidity Sensor",    icon: "💧", description: "Track relative humidity levels in growing environment", unit: "%", apiField: "humidity", thresholds: { min: 40, max: 80, critical: 20 } },
+  light:       { name: "Light Sensor",       icon: "☀️", description: "Monitor light intensity for photosynthesis optimization", unit: "%", apiField: "light", thresholds: { min: 30, max: 90, critical: 20 } },
+  airquality:  { name: "Air Quality Sensor", icon: "🌬️", description: "Monitor air quality and environmental conditions", unit: "ppm", apiField: "airQuality", thresholds: { min: 300, max: 600, critical: 1000 } },
+  soil:        { name: "Soil Moisture Sensor", icon: "🟫", description: "Monitor soil moisture levels for optimal plant hydration", unit: "%", apiField: "soilMoisture", thresholds: { min: 30, max: 70, critical: 20 } },
 };
 
-// Zone name mapping
-const getZoneDisplayName = (zoneId: string): string => {
-  const zoneMap: Record<string, string> = {
-    zone1: "Zone 1",
-    zone2: "Zone 2",
-    zone3: "Zone 3",
-    zone4: "Zone 4",
-  };
-  return zoneMap[zoneId] || zoneId;
-};
-
-// Get zone icon based on zone ID
-const getZoneIcon = (zoneId: string): string => {
-  switch (zoneId) {
-    case "zone1":
-    case "zone2":
-      return "🌶️"; // Chili zones
-    case "zone3":
-    case "zone4":
-      return "🍆"; // Eggplant zones
-    default:
-      return "🌱"; // Default plant icon
-  }
-};
-
-// Helper function to determine if value is critical
-const isCriticalValue = (value: number, sensorType: string): boolean => {
-  const config = sensorConfigs[sensorType];
-  if (!config) return false;
-
-  return (
-    value <= config.thresholds.critical ||
-    value < config.thresholds.min ||
-    value > config.thresholds.max
-  );
+const getZoneDisplayName = (zoneId: string) => ({ zone1: "Zone 1", zone2: "Zone 2", zone3: "Zone 3", zone4: "Zone 4" }[zoneId] || zoneId);
+const getZoneIcon = (zoneId: string) => (zoneId === "zone1" || zoneId === "zone2" ? "🌶️" : zoneId === "zone3" || zoneId === "zone4" ? "🍆" : "🌱");
+const isCriticalValue = (value: number, sensorType: string) => {
+  const cfg = sensorConfigs[sensorType]; if (!cfg) return false;
+  return value <= cfg.thresholds.critical || value < cfg.thresholds.min || value > cfg.thresholds.max;
 };
 
 export default function SensorDetail() {
   const { sensor } = useLocalSearchParams();
   const router = useRouter();
+  const sensorType = typeof sensor === "string" ? sensor : "";
+  const sensorConfig = sensorConfigs[sensorType];
 
-  // State
   const [zoneData, setZoneData] = useState<ProcessedZoneData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const sensorType = typeof sensor === "string" ? sensor : "";
-  const sensorConfig = sensorConfigs[sensorType];
-
-  // Fetch environmental data using API 3.2 get_environmental_data
   const fetchEnvironmentalData = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
-
     try {
-      console.log(`Fetching environmental data for sensor type: ${sensorType}`);
-
-      if (!sensorConfig) {
-        throw new Error(`Invalid sensor type: ${sensorType}`);
-      }
-
-      // Use API 3.2: GET /api/v1/logs/sensor-data with latest=true to get latest record per zone
+      if (!sensorConfig) throw new Error(`Invalid sensor type: ${sensorType}`);
+      // 🔄 use updated endpoint
       const response: EnvironmentalDataResponse[] = await apiRequest(
-        `/logs/sensor-data?latest=true&limit=100`
+        `/logs/sensors?latest=true&limit=100`
       );
-
-      console.log(`Found ${response.length} environmental data records`);
-
-      if (response.length === 0) {
-        setZoneData([]);
-        return;
-      }
-
-      // Process the environmental data by zone for the specific sensor type
-      const processedData = processEnvironmentalDataByZone(
-        response,
-        sensorType
-      );
-      setZoneData(processedData);
-    } catch (error) {
-      console.error("Error fetching environmental data:", error);
-      Alert.alert(
-        "Error",
-        "Failed to fetch sensor data. Please check your connection and try again."
-      );
+      if (!response.length) return setZoneData([]);
+      setZoneData(processEnvironmentalDataByZone(response, sensorType));
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Error", "Failed to fetch sensor data.");
       setZoneData([]);
     } finally {
       setIsLoading(false);
@@ -192,202 +102,89 @@ export default function SensorDetail() {
     }
   };
 
-  // Process environmental data and group by zones for specific sensor type
   const processEnvironmentalDataByZone = (
-    environmentalData: EnvironmentalDataResponse[],
-    sensorType: string
+    data: EnvironmentalDataResponse[],
+    type: string
   ): ProcessedZoneData[] => {
-    const processedZones: ProcessedZoneData[] = [];
-    const config = sensorConfigs[sensorType];
-
-    // Group by zone and get the latest reading for each zone
-    const zoneMap = new Map<string, EnvironmentalDataResponse>();
-
-    environmentalData.forEach((record) => {
-      const existing = zoneMap.get(record.zoneId);
-      // Keep the most recent reading for each zone
-      if (
-        !existing ||
-        new Date(record.timestamp) > new Date(existing.timestamp)
-      ) {
-        zoneMap.set(record.zoneId, record);
-      }
+    const cfg = sensorConfigs[type];
+    if (!cfg) return [];
+    // non-soil: single latest card
+    if (type !== "soil") {
+      const latest = data.reduce((p, c) => new Date(c.timestamp) > new Date(p.timestamp) ? c : p);
+      const raw = latest.zoneSensors[cfg.apiField as keyof typeof latest.zoneSensors];
+      return [{
+        id: `${type}-latest`, zoneId: latest.zoneId, zoneName: "All Zones",
+        sensorType: type, value: `${raw}${cfg.unit}`, rawValue: raw,
+        critical: isCriticalValue(raw, type), icon: cfg.icon,
+        lastUpdated: new Date(latest.timestamp)
+      }];
+    }
+    // soil: break into zones
+    const map = new Map<string, EnvironmentalDataResponse>();
+    data.forEach(r => {
+      const ex = map.get(r.zoneId);
+      if (!ex || new Date(r.timestamp) > new Date(ex.timestamp)) map.set(r.zoneId, r);
     });
-
-    // Convert to ProcessedZoneData format based on sensor type
-    zoneMap.forEach((record, zoneId) => {
-      let value: number;
-      let displayValue: string;
-      let soilMoistureDetails:
-        | Array<{ pin: number; moisture: number; critical: boolean }>
-        | undefined;
-
-      // Extract value based on sensor type
-      if (sensorType === "soil") {
-        // For soil moisture, calculate average from all pins
-        const totalMoisture = record.soilMoistureByPin.reduce(
-          (sum, pin) => sum + pin.soilMoisture,
-          0
-        );
-        value = totalMoisture / record.soilMoistureByPin.length;
-        displayValue = `${Math.round(value)}${config.unit}`;
-
-        // Include detailed pin data for soil moisture
-        soilMoistureDetails = record.soilMoistureByPin.map((pin) => ({
-          pin: pin.pin,
-          moisture: pin.soilMoisture,
-          critical: isCriticalValue(pin.soilMoisture, sensorType),
-        }));
-      } else {
-        // For other sensor types, get value from zoneSensors
-        const apiField =
-          config.apiField as keyof EnvironmentalDataResponse["zoneSensors"];
-        value = record.zoneSensors[apiField];
-        displayValue = `${value}${config.unit}`;
-      }
-
-      processedZones.push({
-        id: `${zoneId}-${sensorType}`,
-        zoneId: zoneId,
-        zoneName: getZoneDisplayName(zoneId),
-        sensorType: sensorType,
-        value: displayValue,
-        rawValue: value,
-        critical: isCriticalValue(value, sensorType),
-        icon: getZoneIcon(zoneId),
-        lastUpdated: new Date(record.timestamp),
-        soilMoistureDetails,
+    const out: ProcessedZoneData[] = [];
+    map.forEach((r, z) => {
+      const total = r.soilMoistureByPin.reduce((s, p) => s + p.soilMoisture, 0);
+      const avg = total / r.soilMoistureByPin.length;
+      out.push({
+        id: `${z}-soil`, zoneId: z, zoneName: getZoneDisplayName(z), sensorType: "soil",
+        value: `${Math.round(avg)}${cfg.unit}`, rawValue: avg,
+        critical: isCriticalValue(avg, "soil"), icon: getZoneIcon(z),
+        lastUpdated: new Date(r.timestamp),
+        soilMoistureDetails: r.soilMoistureByPin.map(p => ({ pin: p.pin, moisture: p.soilMoisture, critical: isCriticalValue(p.soilMoisture, "soil") }))
       });
     });
-
-    // Sort by critical status first, then by zone name
-    return processedZones.sort((a, b) => {
-      if (a.critical && !b.critical) return -1;
-      if (!a.critical && b.critical) return 1;
-      return a.zoneName.localeCompare(b.zoneName);
-    });
+    return out.sort((a, b) => (a.critical === b.critical ? a.zoneName.localeCompare(b.zoneName) : a.critical ? -1 : 1));
   };
 
-  // Initial load
-  useEffect(() => {
-    if (sensorType && sensorConfig) {
-      fetchEnvironmentalData();
-    }
-  }, [sensorType]);
-
-  // Handle refresh
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await fetchEnvironmentalData(false);
-  };
-
-  // Handle zone press
-  const handleZonePress = (zoneData: ProcessedZoneData) => {
+  useEffect(() => { if (sensorType && sensorConfig) fetchEnvironmentalData(); }, [sensorType]);
+  const handleRefresh = async () => { setIsRefreshing(true); await fetchEnvironmentalData(false); };
+  const handleZonePress = (z: ProcessedZoneData) => {
     Alert.alert(
-      `${zoneData.zoneName} - ${sensorConfig?.name}`,
-      `Value: ${zoneData.value}\nStatus: ${
-        zoneData.critical ? "Critical" : "Normal"
-      }\nLast Updated: ${zoneData.lastUpdated.toLocaleString()}`,
-      [
-        {
-          text: "View Zone",
-          onPress: () => {
-            router.push(`/plants/zone/${zoneData.zoneId}`);
-          },
-        },
-        {
-          text: "OK",
-          style: "cancel",
-        },
-      ]
+      `${z.zoneName} - ${sensorConfig.name}`,
+      `Value: ${z.value}\nStatus: ${z.critical ? "Critical" : "Normal"}`,
+      z.sensorType === "soil" ? [{ text: "View Zone", onPress: () => router.push(`/plants/zone/${z.zoneId}`) }, { text: "OK", style: "cancel" }] : [{ text: "OK" }]
     );
   };
 
-  // Calculate stats - Fixed to match SensorStats component interface
+  if (!sensorConfig) return (
+    <View style={styles.container}>
+      <Header title="Sensor Not Found" showBackButton />
+      <EmptyState icon="hardware-chip-outline" title="Sensor not supported" />
+    </View>
+  );
+
+  if (isLoading) return (
+    <View style={styles.container}>
+      <Header title={sensorConfig.name} showBackButton />
+      <LoadingSpinner text={`Loading ${sensorConfig.name} data...`} />
+    </View>
+  );
+
   const stats = {
     totalGroups: zoneData.length,
-    criticalGroups: zoneData.filter((z) => z.critical).length,
-    averageValue:
-      zoneData.length > 0
-        ? Math.round(
-            (zoneData.reduce((sum, z) => sum + z.rawValue, 0) /
-              zoneData.length) *
-              100
-          ) / 100
-        : undefined,
-    unit: sensorConfig?.unit,
+    criticalGroups: zoneData.filter(z => z.critical).length,
+    averageValue: zoneData.length
+      ? Math.round(zoneData.reduce((s, z) => s + z.rawValue, 0) / zoneData.length * 100) / 100
+      : undefined,
+    unit: sensorConfig.unit,
   };
-
-  // Error state - sensor type not found
-  if (!sensorConfig) {
-    return (
-      <View style={styles.container}>
-        <Header title="Sensor Not Found" showBackButton={true} />
-        <View style={styles.content}>
-          <EmptyState
-            icon="hardware-chip-outline"
-            title="Sensor type not found"
-            subtitle={`The sensor type "${sensorType}" is not supported.`}
-          />
-        </View>
-      </View>
-    );
-  }
-
-  // Custom breadcrumbs
-  const customBreadcrumbs = [
-    { label: "Home", route: "/" },
-    { label: "Sensors", route: "/(tabs)/sensors" },
-    { label: sensorConfig.name },
-  ];
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <Header
-          title={sensorConfig.name}
-          showBackButton={true}
-          customBreadcrumbs={customBreadcrumbs}
-        />
-        <LoadingSpinner
-          text={`Loading ${sensorConfig.name.toLowerCase()} data...`}
-        />
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
-      <Header
-        title={sensorConfig.name}
-        showBackButton={true}
-        customBreadcrumbs={customBreadcrumbs}
-      />
-
+      <Header title={sensorConfig.name} showBackButton />
       <View style={styles.content}>
-        {/* Sensor Header */}
-        <SensorHeader
-          icon={sensorConfig.icon}
-          name={sensorConfig.name}
-          description={sensorConfig.description}
-        />
-
-        {/* Stats */}
+        <SensorHeader icon={sensorConfig.icon} name={sensorConfig.name} description={sensorConfig.description} />
         <SensorStats stats={stats} />
-
-        {/* Zone Sensors List */}
         <ZoneSensorsList
           zoneData={zoneData}
-          onZonePress={handleZonePress}
+          onZonePress={sensorType === "soil" ? handleZonePress : undefined}
           sensorType={sensorType}
           refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={handleRefresh}
-              colors={["#174d3c"]}
-              tintColor="#174d3c"
-            />
+            <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} colors={["#174d3c"]} tintColor="#174d3c" />
           }
         />
       </View>
@@ -396,11 +193,6 @@ export default function SensorDetail() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f8f8",
-  },
-  content: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: "#f8f8f8" },
+  content: { flex: 1 },
 });
