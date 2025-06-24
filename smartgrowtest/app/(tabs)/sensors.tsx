@@ -12,11 +12,36 @@ import Header from "../../components/Header";
 
 // Updated sensors list to match the environmental data API
 const sensors = [
-  { label: "Light Sensor", icon: "☀️", route: "light" },
-  { label: "Soil Moisture Sensor", icon: "🟫", route: "soil" },
-  { label: "Air Quality Sensor", icon: "🌬️", route: "airquality" },
-  { label: "Temperature Sensor", icon: "🌡️", route: "temperature" },
-  { label: "Humidity Sensor", icon: "💧", route: "humidity" },
+  {
+    label: "Light Sensor",
+    icon: "☀️",
+    route: "light",
+    description: "Environmental data shared across all zones",
+  },
+  {
+    label: "Temperature Sensor",
+    icon: "🌡️",
+    route: "temperature",
+    description: "Environmental data shared across all zones",
+  },
+  {
+    label: "Humidity Sensor",
+    icon: "💧",
+    route: "humidity",
+    description: "Environmental data shared across all zones",
+  },
+  {
+    label: "Air Quality Sensor",
+    icon: "🌬️",
+    route: "airquality",
+    description: "Environmental data shared across all zones",
+  },
+  {
+    label: "Soil Moisture Sensor",
+    icon: "🟫",
+    route: "soil",
+    description: "Individual plant monitoring by zone and pin",
+  },
 ];
 
 export default function SensorsScreen() {
@@ -28,7 +53,7 @@ export default function SensorsScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.description}>
-          Monitor environmental conditions across all zones
+          Monitor environmental conditions and individual plant health
         </Text>
 
         {sensors.map((sensor, idx) => (
@@ -41,11 +66,7 @@ export default function SensorsScreen() {
             <Text style={styles.sensorIcon}>{sensor.icon}</Text>
             <View style={styles.sensorInfo}>
               <Text style={styles.sensorLabel}>{sensor.label}</Text>
-              <Text style={styles.sensorSubtext}>
-                {sensor.route === "soil"
-                  ? "Monitor soil moisture by plant and zone"
-                  : "View environmental data from all zones"}
-              </Text>
+              <Text style={styles.sensorSubtext}>{sensor.description}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#999" />
           </TouchableOpacity>
@@ -58,14 +79,16 @@ export default function SensorsScreen() {
               <Text style={styles.infoSectionTitle}>Environmental Sensors</Text>
               <Text style={styles.infoText}>
                 Light, Temperature, Humidity, and Air Quality sensors provide
-                environmental data shared across all zones.
+                environmental data that is shared across all zones. The latest
+                reading from any zone is displayed.
               </Text>
             </View>
             <View style={styles.infoSection}>
               <Text style={styles.infoSectionTitle}>Soil Moisture Sensors</Text>
               <Text style={styles.infoText}>
                 Individual plant monitoring with zone-specific and pin-specific
-                data for precise soil moisture tracking.
+                data for precise soil moisture tracking. Each plant has its own
+                optimal thresholds.
               </Text>
             </View>
           </View>
