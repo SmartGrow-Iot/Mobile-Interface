@@ -1,18 +1,29 @@
-// app/plants/[plant].tsx - Updated to use API documentation 4.2 Get Plant Profile
+// app/plants/[plant].tsx - Refactored with separated modal and service
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, ScrollView, Text } from "react-native"; // Added Text import
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { apiRequest } from "@/services/api";
 import Header from "../../components/Header";
 
-// Import new components
+// Import existing components
 import { PlantProfileCard } from "../../components/features/plants/PlantProfileCard";
 import { PlantThresholds } from "../../components/features/plants/PlantThresholds";
 import { PlantInfoCards } from "../../components/features/plants/PlantInfoCards";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 
-// Types based on API documentation 4.2 Get Plant Profile
+// Import new moisture threshold components
+import { MoistureThresholdModal } from "../../components/features/thresholds/MoistureThresholdModal";
+import { MoistureThresholdRange } from "../../services/moistureThresholdService";
+
+// Types based on API documentation
 interface PlantProfileResponse {
   plantId: string;
   name: string;
@@ -40,7 +51,7 @@ interface PlantProfileResponse {
     };
   };
   status: "OPTIMAL" | "WARNING" | "CRITICAL";
-  createdAt: string; // ISO8601 timestamp
+  createdAt: string;
 }
 
 export default function PlantProfile() {
@@ -51,6 +62,9 @@ export default function PlantProfile() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Moisture threshold modal state
+  const [moistureModalVisible, setMoistureModalVisible] = useState(false);
 
   useEffect(() => {
     const fetchPlant = async () => {
@@ -64,8 +78,6 @@ export default function PlantProfile() {
         }
 
         console.log("Fetching plant data for ID:", plant);
-
-        // Use API 4.2: GET /v1/plants/{plant_id}
         const plantData: PlantProfileResponse = await apiRequest(
           `/plants/${plant}`
         );
@@ -85,7 +97,7 @@ export default function PlantProfile() {
     fetchPlant();
   }, [plant]);
 
-  // Handle actuator override - navigate to actuator override page
+  // Handle actuator override
   const handleActuatorPress = () => {
     if (plantDetails) {
       router.push({
@@ -99,7 +111,36 @@ export default function PlantProfile() {
     }
   };
 
-  // Format zone display name
+  // Open moisture threshold modal
+  const handleMoistureThresholdPress = () => {
+    setMoistureModalVisible(true);
+  };
+
+  // Close moisture threshold modal
+  const handleMoistureModalClose = () => {
+    setMoistureModalVisible(false);
+  };
+
+  // Handle moisture thresholds update
+  const handleMoistureThresholdsUpdated = (
+    newThresholds: MoistureThresholdRange
+  ) => {
+    if (plantDetails) {
+      setPlantDetails((prev) =>
+        prev
+          ? {
+              ...prev,
+              thresholds: {
+                ...prev.thresholds,
+                moisture: newThresholds,
+              },
+            }
+          : null
+      );
+    }
+  };
+
+  // Helper functions
   const getZoneDisplayName = (zone: string): string => {
     const zoneMap: Record<string, string> = {
       zone1: "Zone 1",
@@ -110,7 +151,6 @@ export default function PlantProfile() {
     return zoneMap[zone] || zone;
   };
 
-  // Get plant icon based on species or zone
   const getPlantIcon = (species: string | undefined, zone: string): string => {
     const safeSpecies = species?.toLowerCase() || "";
     if (safeSpecies.includes("chili") || safeSpecies.includes("pepper")) {
@@ -119,14 +159,13 @@ export default function PlantProfile() {
     if (safeSpecies.includes("eggplant") || safeSpecies.includes("aubergine")) {
       return "🍆";
     }
-    // Fallback based on zone
     if (zone === "zone1" || zone === "zone2") {
       return "🌶️";
     }
     if (zone === "zone3" || zone === "zone4") {
       return "🍆";
     }
-    return "🌱"; // Default fallback
+    return "🌱";
   };
 
   // Loading state
@@ -158,7 +197,7 @@ export default function PlantProfile() {
     );
   }
 
-  // Custom breadcrumbs for details page
+  // Custom breadcrumbs
   const customBreadcrumbs = [
     { label: "Home", route: "/" },
     {
@@ -194,21 +233,21 @@ export default function PlantProfile() {
     },
     {
       label: "Temperature is",
-      value: "Optimal", // Default since we don't have real-time data
+      value: "Optimal",
       color: "#27ae60",
       bg: "#e8f5e8",
       icon: "🌡️",
     },
   ];
 
-  // Prepare plant info for display
+  // Prepare plant info
   const plantInfo = {
     datePlanted: new Date(plantDetails.createdAt).toLocaleDateString("en-GB"),
     optimalMoisture: `${plantDetails.thresholds.moisture.min} - ${plantDetails.thresholds.moisture.max}%`,
     optimalLight: `${plantDetails.thresholds.light.min} - ${plantDetails.thresholds.light.max}%`,
     optimalTemp: `${plantDetails.thresholds.temperature.min} - ${plantDetails.thresholds.temperature.max}°C`,
     type: plantDetails.species,
-    growthTime: "8-12 weeks", // Default value
+    growthTime: "8-12 weeks",
     notes: `Planted in ${getZoneDisplayName(
       plantDetails.zone
     )} with moisture sensor on pin ${plantDetails.moisturePin}`,
@@ -223,7 +262,7 @@ export default function PlantProfile() {
         customBreadcrumbs={customBreadcrumbs}
       />
 
-      {/* Main Content in ScrollView */}
+      {/* Main Content */}
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
@@ -242,6 +281,19 @@ export default function PlantProfile() {
               actuatorText="Override Actuator"
               onActuatorPress={handleActuatorPress}
             />
+
+            {/* Moisture Threshold Button */}
+            <TouchableOpacity
+              style={styles.moistureThresholdButton}
+              onPress={handleMoistureThresholdPress}
+            >
+              <View style={styles.moistureButtonContent}>
+                <Ionicons name="water-outline" size={16} color="#fff" />
+                <Text style={styles.moistureThresholdText}>
+                  Moisture Threshold
+                </Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -297,6 +349,21 @@ export default function PlantProfile() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Moisture Threshold Modal */}
+      {plantDetails && (
+        <MoistureThresholdModal
+          visible={moistureModalVisible}
+          onClose={handleMoistureModalClose}
+          plantId={plantDetails.plantId}
+          plantName={plantDetails.name}
+          plantIcon={getPlantIcon(plantDetails.species, plantDetails.zone)}
+          zone={plantDetails.zone}
+          moisturePin={plantDetails.moisturePin}
+          currentThresholds={plantDetails.thresholds.moisture}
+          onThresholdsUpdated={handleMoistureThresholdsUpdated}
+        />
+      )}
     </View>
   );
 }
@@ -322,6 +389,25 @@ const styles = StyleSheet.create({
   thresholdsContainer: {
     flex: 1,
     marginLeft: 12,
+  },
+  // Moisture Threshold Button Styles
+  moistureThresholdButton: {
+    backgroundColor: "#3498db",
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  moistureButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  moistureThresholdText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 14,
+    marginLeft: 6,
   },
   hardwareSection: {
     paddingHorizontal: 20,
