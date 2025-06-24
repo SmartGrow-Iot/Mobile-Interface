@@ -1,6 +1,7 @@
 // app/actuator/override.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
+    Animated,
     View,
     Text,
     StyleSheet,
@@ -29,10 +30,8 @@ type ThresholdSettings = {
 export default function ActuatorOverride() {
     const { zone, plant, plantId, actuatorId, actuatorType } =
         useLocalSearchParams();
-
     
-    const { user } = useAuth();
-    // User Detail
+    const { user } = useAuth(); // User Detail
     const [loading, setLoading] = useState(true);
     const [plantIds, setPlantIds] = useState<string[]>([]);
     type ActuatorIds = { [key: string]: string | string[] };
@@ -145,9 +144,9 @@ export default function ActuatorOverride() {
 
     // Threshold values
     const [thresholds, setThresholds] = useState<ThresholdSettings>({
-        watering: { value: "200", unit: ["ml", "%", "%"] },
-        fan: { value: "100", unit: ["s", "%", "%", "%", "%"] },
-        light: { value: "100", unit: ["s", "%", "%"] },
+        watering: { value: "OFF", unit: ["ml", "%", "%"] },
+        fan: { value: "OFF", unit: ["s", "%", "%", "%", "%"] },
+        light: { value: "OFF", unit: ["s", "%", "%"] },
     });
 
     // Input state for modal
@@ -185,6 +184,39 @@ export default function ActuatorOverride() {
         },
     ];
 
+    // For Glowing Animation
+    const glowAnimMap = useRef<{ [key: string]: Animated.Value }>({}).current;
+    useEffect(() => {
+    actuatorConfigs.forEach((config) => {
+        const type = config.type;
+        if (!glowAnimMap[type]) {
+        glowAnimMap[type] = new Animated.Value(0);
+        }
+
+        const isOn = thresholds[type]?.value === "ON";
+
+        if (isOn) {
+        Animated.loop(
+            Animated.sequence([
+            Animated.timing(glowAnimMap[type], {
+                toValue: 1,
+                duration: 1000,
+                useNativeDriver: false,
+            }),
+            Animated.timing(glowAnimMap[type], {
+                toValue: 0,
+                duration: 1000,
+                useNativeDriver: false,
+            }),
+            ])
+        ).start();
+        } else {
+        glowAnimMap[type].stopAnimation();
+        glowAnimMap[type].setValue(0); // reset glow
+        }
+    });
+    }, [thresholds]);
+
     // Handle actuator button press
     const handleActuatorPress = (type: ThresholdType) => {
         setEnableIndex(0);
@@ -209,7 +241,7 @@ export default function ActuatorOverride() {
                     selectedUnitIndex[0],
                     0,
                     selectedUnitIndex[2],
-                ]); // save unit for watering, fan, light.
+                ]); // save unit for water, fan, light.
                 break;
             case "light_duration":
                 // For light - set by duration
@@ -222,10 +254,10 @@ export default function ActuatorOverride() {
                     selectedUnitIndex[0],
                     selectedUnitIndex[1],
                     0,
-                ]); // save unit for watering, fan, light.
+                ]); // save unit for water, fan, light.
                 break;
             case "volume":
-                // For watering - set by volume
+                // For water - set by volume
                 if (enableIndex != 0) {
                     setEnableIndex(0);
                     return;
@@ -235,7 +267,7 @@ export default function ActuatorOverride() {
                     0,
                     selectedUnitIndex[1],
                     selectedUnitIndex[2],
-                ]); // save unit for watering, fan, light.
+                ]); // save unit for water, fan, light.
                 break;
             case "co2":
                 // Set by current CO2 level
@@ -378,7 +410,7 @@ export default function ActuatorOverride() {
 
         const actuatorActionToDoInAPI =
             selectedThreshold === "watering"
-                ? "watering"
+                ? "water"
                 : selectedThreshold === "fan"
                 ? "fan_on"
                 : selectedThreshold === "light"
@@ -543,33 +575,37 @@ export default function ActuatorOverride() {
 
     async function handleToggle(type: ThresholdType): Promise<void> {
       try {
+        console.log("TYPE: ", type);
         let currentActuatorId = actuatorId;
         console.log("initial actuatorId: ", currentActuatorId);
-            const isCurrentlyOn = thresholds[type].value === "1";
-            const newValue = isCurrentlyOn ? "0" : "1";
+            const isCurrentlyOn = thresholds[type].value === "ON";
+            const newValue = isCurrentlyOn ? "OFF" : "ON";
 
-            const actuatorCalledInAPI = type === "fan" ? "fan" : "light";
+            const actuatorCalledInAPI = type === "watering" ? "water" : type;
             const actuatorActionToDoInAPI = `${actuatorCalledInAPI}_${isCurrentlyOn ? 'off' : 'on'}`;
         if (!currentActuatorId) {
-              console.log("using current actuatorIds: ", actuatorIds)
-                //use local fetch actuatorIds state to get the actuatorId
-                currentActuatorId =
-                    actuatorIds && actuatorIds[actuatorCalledInAPI]
-                        ? actuatorIds[actuatorCalledInAPI]
-                        : "";
+            console.log("using current actuatorIds: ", actuatorIds);
+            currentActuatorId = actuatorIds?.[type] ?? "";
+        }
+
+        // If it's an array, get the first element
+        if (Array.isArray(currentActuatorId)) {
+            currentActuatorId = currentActuatorId[0] ?? "";
         }
         console.log("after actuatorId: ", currentActuatorId);
         
+        const normalizedActuatorId = Array.isArray(currentActuatorId)
+        ? currentActuatorId[0] ?? ""
+        : currentActuatorId;
 
         if (plantId) {
            const payload = {
               action: actuatorActionToDoInAPI,
-              actuatorId: currentActuatorId,
-              plantId: plantId,
-              amount: 1,
+              actuatorId: normalizedActuatorId,
               trigger: "manual",
               triggerBy: user?.id || "unknown_user",
               timestamp: new Date().toISOString(),
+              zone: zone
            };
            console.log(
                `Sending ${actuatorActionToDoInAPI} request for plant ${plantId}:`,
@@ -606,6 +642,7 @@ export default function ActuatorOverride() {
            console.log(
                `Successfully ${actuatorActionToDoInAPI} for plant ${plantId}`
            );
+           console.log("Response from API:", response);
            Alert.alert(
                "Success",
                `Actuator ${actuatorCalledInAPI} is now ${
@@ -616,13 +653,12 @@ export default function ActuatorOverride() {
         else {
           for (const plantId of plantIds) {
               const payload = {
-                  action: actuatorActionToDoInAPI,
-                  actuatorId: currentActuatorId,
-                  plantId: plantId,
-                  amount: 1,
-                  trigger: "manual",
-                  triggerBy: user?.id || "unknown_user",
-                  timestamp: new Date().toISOString(),
+                action: actuatorActionToDoInAPI,
+                actuatorId: currentActuatorId,
+                trigger: "manual",
+                triggerBy: user?.id || "unknown_user",
+                timestamp: new Date().toISOString(),
+                zone: zone
               };
 
               console.log(
@@ -771,88 +807,77 @@ export default function ActuatorOverride() {
 
                 {/* Actuator Controls */}
                 <View style={styles.actuatorSection}>
-                    {actuatorConfigs.map((config) => (
+                    {actuatorConfigs.map((config) => {
+                        const type = config.type;
+                        const glowAnim = glowAnimMap[type] || new Animated.Value(0);
+
+                        const glowingBackground = glowAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [config.backgroundColor, "#aaffaa"], // glow color
+                        });
+
+                        return (
                         <TouchableOpacity
-                            key={config.type}
+                            key={type}
                             style={[
-                                styles.actuatorButton,
-                                { backgroundColor: config.backgroundColor },
+                            styles.actuatorButton,
+                            { backgroundColor: config.backgroundColor },
                             ]}
                             activeOpacity={0.7}
                         >
                             <View
-                                style={[
-                                    styles.actuatorIconContainer,
-                                    { backgroundColor: config.color },
-                                ]}
+                            style={[
+                                styles.actuatorIconContainer,
+                                { backgroundColor: config.color },
+                            ]}
                             >
-                                <Ionicons
-                                    name={config.icon}
-                                    size={32}
-                                    color="#fff"
-                                />
+                            <Ionicons name={config.icon} size={32} color="#fff" />
                             </View>
+
                             <View style={styles.actuatorInfo}>
-                                <Text style={styles.actuatorTitle}>
-                                    {config.title}
-                                </Text>
-                                <Text style={styles.actuatorSubtitle}>
-                                    {config.type === "watering" ? (
-                                        <>
-                                            Watering Amount:{" "}
-                                            <Text style={styles.thresholdValue}>
-                                                {thresholds[config.type].value}
-                                                {
-                                                    thresholds[config.type]
-                                                        .unit[
-                                                        selectedUnitIndex[
-                                                            config.index
-                                                        ]
-                                                    ]
-                                                }
-                                            </Text>
-                                        </>
-                                    ) : config.type === "fan" ? (
-                                        "Toggle fan on/off"
-                                    ) : (
-                                        "Toggle light on/off"
-                                    )}
-                                </Text>
-                                {config.type === "watering" ? (
-                                    <TouchableOpacity
-                                        style={styles.adjustButton}
-                                        onPress={() =>
-                                            handleActuatorPress(config.type)
-                                        }
-                                    >
-                                        <Text style={styles.adjustButtonText}>
-                                            Start Override
-                                        </Text>
-                                    </TouchableOpacity>
+                            <Text style={styles.actuatorTitle}>{config.title}</Text>
+                            <Text style={styles.actuatorSubtitle}>
+                                {type === "watering" ? (
+                                "Toggle water on/off"
+                                ) : type === "fan" ? (
+                                "Toggle fan on/off"
                                 ) : (
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.toggleButton,
-                                            thresholds[config.type].value ===
-                                                "1" &&
-                                                styles.toggleButtonActive,
-                                        ]}
-                                        onPress={() =>
-                                            handleToggle(config.type)
-                                        }
-                                    >
-                                        <Text style={styles.toggleButtonText}>
-                                            {thresholds[config.type].value ===
-                                            "1"
-                                                ? "ON"
-                                                : "OFF"}
-                                        </Text>
-                                    </TouchableOpacity>
+                                "Toggle light on/off"
                                 )}
+                            </Text>
+
+                            {(
+                                <Animated.View
+                                style={[
+                                    styles.toggleButton,
+                                    thresholds[type].value === "ON" && {
+                                    backgroundColor: glowingBackground,
+                                    shadowColor: "#27ae60",
+                                    shadowOffset: { width: 0, height: 0 },
+                                    shadowOpacity: 0.7,
+                                    shadowRadius: 10,
+                                    elevation: 10,
+                                    },
+                                ]}
+                                >
+                                <TouchableOpacity
+                                    style={[
+                                    styles.toggleButton,
+                                    thresholds[type].value === "ON" && styles.toggleButtonActive,
+                                    ]}
+                                    onPress={() => handleToggle(type)}
+                                >
+                                    <Text style={styles.toggleButtonText}>
+                                    {thresholds[type].value}
+                                    </Text>
+                                </TouchableOpacity>
+                                </Animated.View>
+                            )}
                             </View>
                         </TouchableOpacity>
-                    ))}
-                </View>
+                        );
+                    })}
+                    </View>
             </ScrollView>
 
             {/* Threshold Setting Modal */}
@@ -878,7 +903,7 @@ export default function ActuatorOverride() {
                             <View style={styles.inputContainer}>
                                 <Text style={styles.inputLabel}>
                                     {selectedThreshold === "watering"
-                                        ? "Watering amount:"
+                                        ? "Water amount:"
                                         : selectedThreshold === "fan"
                                         ? "Fan amount:"
                                         : "Light amount:"}
