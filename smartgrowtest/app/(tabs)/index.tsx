@@ -1,4 +1,4 @@
-// app/(tabs)/index.tsx - Updated to remove alerts
+// app/(tabs)/index.tsx - Updated with System Thresholds component
 import React from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
@@ -6,6 +6,7 @@ import Header from "../../components/Header";
 
 // Import components
 import { ZoneGrid } from "../../components/features/zones/ZoneGrid";
+import { SystemThresholds } from "../../components/features/thresholds/SystemThresholds";
 
 // Import data
 import { mockZonesDirect } from "../../data/zones";
@@ -27,6 +28,9 @@ export default function HomePage() {
       <Header title="My Plants" showSearch={true} showProfile={true} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* System Thresholds Component */}
+        <SystemThresholds />
+
         {/* Zones Grid - Direct display of 4 zones */}
         <ZoneGrid
           zones={zones}
@@ -47,7 +51,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
     paddingTop: 8,
   },
 });
