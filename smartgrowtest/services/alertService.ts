@@ -1,4 +1,4 @@
-// services/alertService.ts - Fixed with graceful 404 handling
+// services/alertService.ts - Complete implementation with force refresh
 import { apiRequest } from "./api";
 import { Alert } from "../types/Alert";
 
@@ -27,11 +27,24 @@ export interface SensorLogResponse {
 class AlertService {
   private alerts: Alert[] = [];
   private listeners: ((alerts: Alert[]) => void)[] = [];
-  private isDataAvailable = false; // Track if API is ready
+  private isDataAvailable = false;
+
+  // Caching properties
+  private lastFetchTime: number = 0;
+  private cacheTimeout: number = 5 * 60 * 1000; // 5 minutes cache
+  private isCurrentlyFetching: boolean = false;
+  private initializationPromise: Promise<void> | null = null;
+  private isInitialized: boolean = false;
 
   // Subscribe to alert updates
   subscribe(callback: (alerts: Alert[]) => void) {
     this.listeners.push(callback);
+
+    // Immediately call with current data if available
+    if (this.alerts.length > 0) {
+      callback(this.alerts);
+    }
+
     return () => {
       this.listeners = this.listeners.filter(
         (listener) => listener !== callback
@@ -44,7 +57,21 @@ class AlertService {
     this.listeners.forEach((listener) => listener(this.alerts));
   }
 
-  // Get all alerts
+  // Check if cache is still valid
+  private isCacheValid(): boolean {
+    const now = Date.now();
+    return now - this.lastFetchTime < this.cacheTimeout && this.isInitialized;
+  }
+
+  // ✨ NEW: Force clear cache method
+  forceClearCache() {
+    console.log("🗑️ Forcing cache clear for alerts");
+    this.lastFetchTime = 0;
+    this.isInitialized = false;
+    this.initializationPromise = null;
+  }
+
+  // Get all alerts (with caching)
   getAlerts(): Alert[] {
     return this.alerts.sort(
       (a, b) => b.timestamp!.getTime() - a.timestamp!.getTime()
@@ -86,16 +113,14 @@ class AlertService {
   private async safeApiRequest<T>(endpoint: string): Promise<T | null> {
     try {
       const result = await apiRequest(endpoint);
-      this.isDataAvailable = true; // Mark that API is working
+      this.isDataAvailable = true;
       return result;
     } catch (error: any) {
-      // Handle 404s silently - this means data isn't uploaded yet
       if (error.message?.includes("404") || error.status === 404) {
         console.log(`📡 API endpoint not ready: ${endpoint}`);
         return null;
       }
 
-      // Handle other HTTP errors silently in development
       if (__DEV__ && (error.message?.includes("HTTP error") || error.status)) {
         console.log(
           `📡 API not ready for ${endpoint}:`,
@@ -104,14 +129,13 @@ class AlertService {
         return null;
       }
 
-      // Only log unexpected errors
       console.error(`API Error for ${endpoint}:`, error);
       return null;
     }
   }
 
-  // Fetch actuator data and generate alerts - with graceful fallback
-  async fetchActuatorAlerts() {
+  // Fetch actuator data and generate alerts
+  private async fetchActuatorAlerts() {
     const zones = ["zone1", "zone2", "zone3", "zone4"];
     const actuatorTypes = ["watering", "light", "fan"];
 
@@ -126,7 +150,6 @@ class AlertService {
           );
 
           if (response === null) {
-            // API returned 404 or error - skip this zone/type
             continue;
           }
 
@@ -190,7 +213,6 @@ class AlertService {
         }
       }
 
-      // Only show "no data" alert if we're in development and want to see it
       if (!hasAnyData && __DEV__) {
         console.log(
           "📡 No actuator data available yet - API endpoints not ready"
@@ -198,7 +220,6 @@ class AlertService {
       }
     } catch (error) {
       console.error("Unexpected error in actuator alerts:", error);
-      // Only add error alert for truly unexpected errors
       if (!__DEV__) {
         this.addAlert({
           text: "Actuator system temporarily unavailable",
@@ -211,8 +232,8 @@ class AlertService {
     }
   }
 
-  // Fetch sensor data and generate threshold alerts - with graceful fallback
-  async fetchSensorAlerts() {
+  // Fetch sensor data and generate threshold alerts
+  private async fetchSensorAlerts() {
     const zones = ["zone1", "zone2", "zone3", "zone4"];
 
     try {
@@ -220,29 +241,25 @@ class AlertService {
       let hasAnyData = false;
 
       for (const zone of zones) {
-        // Get recent sensor logs for this zone
         const endDate = new Date().toISOString();
         const startDate = new Date(
           Date.now() - 2 * 60 * 60 * 1000
-        ).toISOString(); // Last 2 hours
+        ).toISOString();
 
         const sensorLogs = await this.safeApiRequest<SensorLogResponse[]>(
           `/logs/sensor-data?zoneId=${zone}&startDate=${startDate}&endDate=${endDate}&limit=100`
         );
 
         if (sensorLogs === null) {
-          // API returned 404 or error - skip this zone
           continue;
         }
 
         hasAnyData = true;
         console.log(`✅ Zone ${zone} sensor logs:`, sensorLogs.length);
 
-        // Process sensor logs to find threshold violations
         this.processSensorLogs(sensorLogs, zone);
       }
 
-      // Only show "no data" message in development
       if (!hasAnyData && __DEV__) {
         console.log(
           "📡 No sensor data available yet - API endpoints not ready"
@@ -250,7 +267,6 @@ class AlertService {
       }
     } catch (error) {
       console.error("Unexpected error in sensor alerts:", error);
-      // Only add error alert for truly unexpected errors
       if (!__DEV__) {
         this.addAlert({
           text: "Sensor system temporarily unavailable",
@@ -265,7 +281,6 @@ class AlertService {
 
   // Process sensor logs and create alerts for threshold violations
   private processSensorLogs(logs: SensorLogResponse[], zone: string) {
-    // Define thresholds for different sensor types
     const thresholds = {
       temperature: { min: 18, max: 32, critical: 35 },
       humidity: { min: 40, max: 80, critical: 90 },
@@ -273,18 +288,16 @@ class AlertService {
       soilMoisture: { min: 30, max: 80, critical: 20 },
     };
 
-    // Group logs by sensor type (you might need to fetch sensor info to determine type)
     const recentLogs = logs.filter((log) => {
       const logTime = new Date(log.timestamp);
       const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
       return logTime > thirtyMinutesAgo;
     });
 
-    // For demonstration, create some threshold alerts based on values
     recentLogs.forEach((log) => {
       const value = log.value;
 
-      // Example: Check if value seems like temperature (15-40 range)
+      // Temperature checks
       if (value >= 15 && value <= 40) {
         if (value > thresholds.temperature.critical) {
           this.addAlert({
@@ -311,7 +324,7 @@ class AlertService {
         }
       }
 
-      // Example: Check if value seems like humidity/moisture percentage (0-100 range)
+      // Moisture checks
       if (value >= 0 && value <= 100) {
         if (value < thresholds.soilMoisture.critical) {
           this.addAlert({
@@ -379,12 +392,36 @@ class AlertService {
     }
   }
 
-  // Initialize and fetch all alerts - with graceful handling
-  async initialize() {
+  // Initialize and fetch all alerts - with singleton pattern and caching
+  async initialize(): Promise<void> {
+    // If already initializing, return the existing promise
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    // If currently fetching or cache is still valid, don't fetch again
+    if (this.isCurrentlyFetching || this.isCacheValid()) {
+      console.log("📦 Using cached alert data");
+      return Promise.resolve();
+    }
+
+    // Create initialization promise
+    this.initializationPromise = this.performInitialization();
+
+    try {
+      await this.initializationPromise;
+    } finally {
+      // Clear the promise so future calls can create a new one
+      this.initializationPromise = null;
+    }
+  }
+
+  private async performInitialization(): Promise<void> {
     try {
       console.log("🚀 Initializing alert service...");
+      this.isCurrentlyFetching = true;
 
-      // Clear existing alerts
+      // Clear existing alerts only if we're doing a fresh fetch
       this.clearAlerts();
 
       // Test connectivity first
@@ -394,7 +431,6 @@ class AlertService {
         console.log(
           "📡 API not ready yet - will retry when data becomes available"
         );
-        // Add a friendly development-only message
         this.addAlert({
           text: "🔧 Development mode: API endpoints not ready yet",
           color: "#2196F3",
@@ -402,11 +438,16 @@ class AlertService {
           type: "general",
           severity: "low",
         });
+        this.isInitialized = true; // Mark as initialized even with mock data
         return;
       }
 
-      // Fetch data from APIs (will handle 404s gracefully)
+      // Fetch data from APIs
       await Promise.all([this.fetchActuatorAlerts(), this.fetchSensorAlerts()]);
+
+      // Update cache timestamp
+      this.lastFetchTime = Date.now();
+      this.isInitialized = true;
 
       console.log(
         `✅ Alert service initialized with ${this.alerts.length} alerts`
@@ -414,7 +455,6 @@ class AlertService {
     } catch (error) {
       console.error("Error initializing alert service:", error);
 
-      // Only show error in production
       if (!__DEV__) {
         this.addAlert({
           text: "Monitoring system temporarily unavailable",
@@ -424,16 +464,19 @@ class AlertService {
           severity: "low",
         });
       }
+      this.isInitialized = true; // Mark as initialized even with errors
+    } finally {
+      this.isCurrentlyFetching = false;
     }
   }
 
-  // Refresh alerts
-  async refresh() {
+  // Refresh alerts - unchanged method signature
+  async refresh(): Promise<void> {
     await this.initialize();
   }
 
-  // Test API connectivity - returns true if API is ready
-  async testConnectivity() {
+  // Test API connectivity
+  async testConnectivity(): Promise<boolean> {
     try {
       const testZone = "zone1";
       const testResponse = await this.safeApiRequest<ZoneActuatorsResponse>(
@@ -451,6 +494,17 @@ class AlertService {
       console.log("📡 API connectivity test: not ready");
       return false;
     }
+  }
+
+  // Get cache status for debugging
+  getCacheStatus() {
+    return {
+      lastFetch: new Date(this.lastFetchTime),
+      cacheValid: this.isCacheValid(),
+      isCurrentlyFetching: this.isCurrentlyFetching,
+      isInitialized: this.isInitialized,
+      alertCount: this.alerts.length,
+    };
   }
 
   // Add method to simulate some alerts for development

@@ -1,4 +1,4 @@
-// app/(tabs)/index.tsx - Updated with real alert data
+// app/(tabs)/index.tsx - Complete implementation with force refresh
 import React, { useState, useEffect } from "react";
 import { View, StyleSheet, ScrollView, RefreshControl } from "react-native";
 import { useRouter } from "expo-router";
@@ -19,7 +19,7 @@ export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState<string>("chili");
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   // Get active zones based on selected category
@@ -27,21 +27,22 @@ export default function HomePage() {
     mockZoneCategories.find((category) => category.id === activeCategory)
       ?.zones || [];
 
-  // Initialize and subscribe to alerts
+  // Initialize and subscribe to alerts - only runs once on mount
   useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+
     const initializeAlerts = async () => {
       try {
         setIsLoading(true);
 
-        // Subscribe to alert updates
-        const unsubscribe = alertService.subscribe((newAlerts) => {
+        // Subscribe to alert updates first to get immediate updates
+        unsubscribe = alertService.subscribe((newAlerts) => {
           setAlerts(newAlerts);
+          setIsLoading(false); // Set loading to false when we get data
         });
 
-        // Initialize alert service
+        // Initialize alert service (will use cache if available)
         await alertService.initialize();
-
-        return unsubscribe;
       } catch (error) {
         console.error("Error initializing alerts:", error);
       } finally {
@@ -49,13 +50,15 @@ export default function HomePage() {
       }
     };
 
-    const unsubscribe = initializeAlerts();
+    initializeAlerts();
 
     // Cleanup subscription on unmount
     return () => {
-      unsubscribe?.then((cleanup) => cleanup?.());
+      if (unsubscribe) {
+        unsubscribe();
+      }
     };
-  }, []);
+  }, []); // Empty dependency array - only run once on mount
 
   // Handle alert press - navigate based on alert type
   const handleAlertPress = (alert: Alert) => {
@@ -120,10 +123,16 @@ export default function HomePage() {
     setActiveCategory(categoryId);
   };
 
-  // Handle refresh
+  // ✨ Handle refresh with force cache clear
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
+      console.log("🔄 Force refreshing alerts...");
+
+      // Force clear cache before refresh
+      alertService.forceClearCache();
+
+      // Now refresh which will fetch fresh data
       await alertService.refresh();
     } catch (error) {
       console.error("Error refreshing alerts:", error);
@@ -145,6 +154,9 @@ export default function HomePage() {
             onRefresh={handleRefresh}
             colors={["#174d3c"]}
             tintColor="#174d3c"
+            title={
+              isRefreshing ? "Force refreshing alerts..." : "Pull to refresh"
+            }
           />
         }
       >
@@ -177,6 +189,7 @@ export default function HomePage() {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,

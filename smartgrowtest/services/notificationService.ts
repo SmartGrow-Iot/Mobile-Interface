@@ -1,4 +1,4 @@
-// services/notificationService.ts - Updated with real API integration
+// services/notificationService.ts - Complete implementation with force refresh
 import { apiRequest } from "./api";
 import {
   Notification,
@@ -6,7 +6,7 @@ import {
   NotificationPriority,
 } from "../types/Notification";
 
-// API Response types based on your documentation
+// API Response types
 interface SensorResponse {
   sensorId?: string;
   sensorModel: string;
@@ -22,7 +22,7 @@ interface ActionLogResponse {
   amount: number | null;
   trigger: string;
   triggerBy: string;
-  timestamp: string; // ISO 8601 format
+  timestamp: string;
 }
 
 class NotificationService {
@@ -36,9 +36,22 @@ class NotificationService {
     "air_quality",
   ];
 
+  // Caching properties
+  private lastFetchTime: number = 0;
+  private cacheTimeout: number = 3 * 60 * 1000; // 3 minutes cache for notifications
+  private isCurrentlyFetching: boolean = false;
+  private initializationPromise: Promise<void> | null = null;
+  private isInitialized: boolean = false;
+
   // Subscribe to notification updates
   subscribe(callback: (notifications: Notification[]) => void) {
     this.listeners.push(callback);
+
+    // Immediately call with current data if available
+    if (this.notifications.length > 0) {
+      callback(this.notifications);
+    }
+
     return () => {
       this.listeners = this.listeners.filter(
         (listener) => listener !== callback
@@ -49,6 +62,20 @@ class NotificationService {
   // Notify all listeners
   private notify() {
     this.listeners.forEach((listener) => listener(this.notifications));
+  }
+
+  // Check if cache is still valid
+  private isCacheValid(): boolean {
+    const now = Date.now();
+    return now - this.lastFetchTime < this.cacheTimeout && this.isInitialized;
+  }
+
+  // ✨ NEW: Force clear cache method
+  forceClearCache() {
+    console.log("🗑️ Forcing cache clear for notifications");
+    this.lastFetchTime = 0;
+    this.isInitialized = false;
+    this.initializationPromise = null;
   }
 
   // Get all notifications
@@ -119,11 +146,42 @@ class NotificationService {
     return newNotification;
   }
 
-  // 1. Fetch all action logs (API: get_all_action_logs)
-  async fetchActionLogNotifications() {
+  // Safe API request with error handling
+  private async safeApiRequest<T>(endpoint: string): Promise<T | null> {
+    try {
+      const result = await apiRequest(endpoint);
+      return result;
+    } catch (error: any) {
+      if (error.message?.includes("404") || error.status === 404) {
+        console.log(`📡 Notification API endpoint not ready: ${endpoint}`);
+        return null;
+      }
+
+      if (__DEV__ && (error.message?.includes("HTTP error") || error.status)) {
+        console.log(
+          `📡 Notification API not ready for ${endpoint}:`,
+          error.status || error.message
+        );
+        return null;
+      }
+
+      console.error(`Notification API Error for ${endpoint}:`, error);
+      return null;
+    }
+  }
+
+  // 1. Fetch all action logs with caching
+  private async fetchActionLogNotifications() {
     try {
       console.log("Fetching action logs from API...");
-      const actionLogs: ActionLogResponse[] = await apiRequest("/logs/actions");
+      const actionLogs: ActionLogResponse[] | null = await this.safeApiRequest(
+        "/logs/actions"
+      );
+
+      if (!actionLogs) {
+        console.log("No action logs available yet");
+        return;
+      }
 
       console.log(`Received ${actionLogs.length} action logs`);
 
@@ -152,19 +210,22 @@ class NotificationService {
       }
     } catch (error) {
       console.error("Error fetching action log notifications:", error);
-      this.addNotification({
-        title: "Action Log Error",
-        message: "Failed to fetch latest system activities",
-        type: "system_update",
-        priority: "medium",
-        status: "unread",
-        timestamp: new Date(),
-      });
+      // Only add error notification in production
+      if (!__DEV__) {
+        this.addNotification({
+          title: "Action Log Error",
+          message: "Failed to fetch latest system activities",
+          type: "system_update",
+          priority: "medium",
+          status: "unread",
+          timestamp: new Date(),
+        });
+      }
     }
   }
 
-  // 2. Fetch all sensors by type (API: get_all_sensors)
-  async fetchSensorStatusNotifications() {
+  // 2. Fetch all sensors by type with caching
+  private async fetchSensorStatusNotifications() {
     try {
       console.log("Fetching sensor data from API...");
       const allSensorData: { [key: string]: SensorResponse[] } = {};
@@ -173,11 +234,14 @@ class NotificationService {
       for (const sensorType of this.sensorTypes) {
         try {
           console.log(`Fetching ${sensorType} sensors...`);
-          const sensors: SensorResponse[] = await apiRequest(
+          const sensors: SensorResponse[] | null = await this.safeApiRequest(
             `/sensors?sensor_type=${sensorType}`
           );
-          allSensorData[sensorType] = sensors;
-          console.log(`Found ${sensors.length} ${sensorType} sensors`);
+
+          allSensorData[sensorType] = sensors || [];
+          console.log(
+            `Found ${allSensorData[sensorType].length} ${sensorType} sensors`
+          );
         } catch (error) {
           console.error(`Error fetching ${sensorType} sensors:`, error);
           allSensorData[sensorType] = [];
@@ -188,14 +252,17 @@ class NotificationService {
       this.processSensorData(allSensorData);
     } catch (error) {
       console.error("Error fetching sensor notifications:", error);
-      this.addNotification({
-        title: "Sensor Status Error",
-        message: "Failed to fetch sensor status information",
-        type: "system_update",
-        priority: "medium",
-        status: "unread",
-        timestamp: new Date(),
-      });
+      // Only add error notification in production
+      if (!__DEV__) {
+        this.addNotification({
+          title: "Sensor Status Error",
+          message: "Failed to fetch sensor status information",
+          type: "system_update",
+          priority: "medium",
+          status: "unread",
+          timestamp: new Date(),
+        });
+      }
     }
   }
 
@@ -227,7 +294,7 @@ class NotificationService {
           },
         });
 
-        // Check for sensor-specific issues (example: missing sensors for critical types)
+        // Check for sensor-specific issues
         if (sensorType === "soil_moisture" && sensors.length === 0) {
           this.addNotification({
             title: "Critical: No Soil Moisture Sensors",
@@ -279,10 +346,10 @@ class NotificationService {
     // Determine priority based on action type and trigger
     let priority: NotificationPriority = "low";
     if (log.trigger === "auto") {
-      priority = "medium"; // Auto actions are more important
+      priority = "medium";
     }
     if (log.action === "watering" && log.trigger === "auto") {
-      priority = "high"; // Auto watering is high priority
+      priority = "high";
     }
 
     this.addNotification({
@@ -329,74 +396,122 @@ class NotificationService {
     );
   }
 
-  // Initialize notifications (call this on app start)
-  async initialize() {
+  // Initialize notifications with singleton pattern and caching
+  async initialize(): Promise<void> {
+    // If already initializing, return the existing promise
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    // If currently fetching or cache is still valid, don't fetch again
+    if (this.isCurrentlyFetching || this.isCacheValid()) {
+      console.log("📦 Using cached notification data");
+      return Promise.resolve();
+    }
+
+    // Create initialization promise
+    this.initializationPromise = this.performInitialization();
+
     try {
-      console.log("Initializing notification service...");
-
-      // Add initial startup notification
-      this.addNotification({
-        title: "SmartGrow System Started",
-        message: "Notification system is now monitoring your plants",
-        type: "system_update",
-        priority: "low",
-        status: "unread",
-        timestamp: new Date(),
-      });
-
-      // Fetch data from both APIs
-      await Promise.all([
-        this.fetchActionLogNotifications(),
-        this.fetchSensorStatusNotifications(),
-      ]);
-
-      console.log("Notification service initialized successfully");
-    } catch (error) {
-      console.error("Error initializing notifications:", error);
-      this.addNotification({
-        title: "Initialization Error",
-        message: "Failed to initialize notification system",
-        type: "system_update",
-        priority: "high",
-        status: "unread",
-        timestamp: new Date(),
-      });
+      await this.initializationPromise;
+    } finally {
+      // Clear the promise so future calls can create a new one
+      this.initializationPromise = null;
     }
   }
 
-  // Refresh notifications
-  async refresh() {
+  private async performInitialization(): Promise<void> {
+    try {
+      console.log("🚀 Initializing notification service...");
+      this.isCurrentlyFetching = true;
+
+      // Only clear notifications if we're doing a fresh fetch (not cached)
+      if (!this.isCacheValid()) {
+        // Add initial startup notification only on first initialization
+        if (!this.isInitialized) {
+          this.addNotification({
+            title: "SmartGrow System Started",
+            message: "Notification system is now monitoring your plants",
+            type: "system_update",
+            priority: "low",
+            status: "unread",
+            timestamp: new Date(),
+          });
+        }
+
+        // Fetch data from both APIs
+        await Promise.all([
+          this.fetchActionLogNotifications(),
+          this.fetchSensorStatusNotifications(),
+        ]);
+
+        // Update cache timestamp
+        this.lastFetchTime = Date.now();
+        this.isInitialized = true;
+      }
+
+      console.log("✅ Notification service initialized successfully");
+    } catch (error) {
+      console.error("Error initializing notifications:", error);
+
+      // Only add error notification in production
+      if (!__DEV__) {
+        this.addNotification({
+          title: "Initialization Error",
+          message: "Failed to initialize notification system",
+          type: "system_update",
+          priority: "high",
+          status: "unread",
+          timestamp: new Date(),
+        });
+      }
+      this.isInitialized = true; // Mark as initialized even with errors
+    } finally {
+      this.isCurrentlyFetching = false;
+    }
+  }
+
+  // Refresh notifications - unchanged method signature
+  async refresh(): Promise<void> {
     console.log("Refreshing notifications...");
-    await Promise.all([
-      this.fetchActionLogNotifications(),
-      this.fetchSensorStatusNotifications(),
-    ]);
+    await this.initialize();
+  }
+
+  // Get cache status for debugging
+  getCacheStatus() {
+    return {
+      lastFetch: new Date(this.lastFetchTime),
+      cacheValid: this.isCacheValid(),
+      isCurrentlyFetching: this.isCurrentlyFetching,
+      isInitialized: this.isInitialized,
+      notificationCount: this.notifications.length,
+    };
   }
 
   // Test API connectivity
   async testApiConnectivity() {
     try {
       // Test action logs API
-      const actionLogsTest = await apiRequest("/logs/actions");
-      console.log(
-        "✅ Action logs API working",
-        actionLogsTest.length,
-        "logs found"
-      );
+      const actionLogsTest:any = await this.safeApiRequest("/logs/actions");
+      if (actionLogsTest) {
+        console.log(
+          "✅ Action logs API working",
+          actionLogsTest.length,
+          "logs found"
+        );
+      }
 
       // Test sensors API for each type
       for (const sensorType of this.sensorTypes) {
-        try {
-          const sensorsTest = await apiRequest(
-            `/sensors?sensor_type=${sensorType}`
-          );
+        const sensorsTest:any = await this.safeApiRequest(
+          `/sensors?sensor_type=${sensorType}`
+        );
+        if (sensorsTest) {
           console.log(
             `✅ ${sensorType} sensors API working`,
             sensorsTest.length,
             "sensors found"
           );
-        } catch (error) {
-          console.log(`❌ ${sensorType} sensors API failed:`, error);
         }
       }
 

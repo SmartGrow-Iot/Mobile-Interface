@@ -1,3 +1,4 @@
+// app/notifications.tsx - Complete implementation with force refresh
 import React from "react";
 import { View, StyleSheet, TouchableOpacity, Text, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -71,6 +72,12 @@ export default function NotificationsScreen() {
     );
   };
 
+  // ✨ Force refresh function (clears cache and fetches fresh data)
+  const handleForceRefresh = async () => {
+    console.log("🔄 Force refreshing notifications...");
+    await refresh(); // This now uses the updated refresh function
+  };
+
   const customBreadcrumbs = [
     { label: "Home", route: "/" },
     { label: "Profile", route: "/(tabs)/profile" },
@@ -110,21 +117,67 @@ export default function NotificationsScreen() {
       {/* Action Buttons */}
       <View style={styles.actionBar}>
         <TouchableOpacity
-          style={styles.actionButton}
+          style={[
+            styles.actionButton,
+            unreadCount === 0 && styles.disabledButton,
+          ]}
           onPress={handleMarkAllAsRead}
           disabled={unreadCount === 0}
         >
-          <Ionicons name="checkmark-done" size={20} color="#174d3c" />
-          <Text style={styles.actionButtonText}>Mark All Read</Text>
+          <Ionicons
+            name="checkmark-done"
+            size={18}
+            color={unreadCount === 0 ? "#999" : "#174d3c"}
+          />
+          <Text
+            style={[
+              styles.actionButtonText,
+              unreadCount === 0 && styles.disabledText,
+            ]}
+          >
+            Mark All Read
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.actionButton}
+          style={[styles.actionButton, styles.refreshButton]}
+          onPress={handleForceRefresh}
+          disabled={isLoading}
+        >
+          <Ionicons
+            name={isLoading ? "sync" : "refresh-outline"}
+            size={18}
+            color={isLoading ? "#999" : "#2196F3"}
+          />
+          <Text
+            style={[
+              styles.actionButtonText,
+              { color: isLoading ? "#999" : "#2196F3" },
+            ]}
+          >
+            {isLoading ? "Refreshing..." : "Refresh"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.actionButton,
+            notifications.length === 0 && styles.disabledButton,
+          ]}
           onPress={handleClearAll}
           disabled={notifications.length === 0}
         >
-          <Ionicons name="trash-outline" size={20} color="#ff4444" />
-          <Text style={[styles.actionButtonText, { color: "#ff4444" }]}>
+          <Ionicons
+            name="trash-outline"
+            size={18}
+            color={notifications.length === 0 ? "#999" : "#ff4444"}
+          />
+          <Text
+            style={[
+              styles.actionButtonText,
+              { color: notifications.length === 0 ? "#999" : "#ff4444" },
+            ]}
+          >
             Clear All
           </Text>
         </TouchableOpacity>
@@ -136,8 +189,21 @@ export default function NotificationsScreen() {
         onNotificationPress={handleNotificationPress}
         onNotificationDismiss={handleNotificationDismiss}
         isRefreshing={isLoading}
-        onRefresh={refresh}
+        onRefresh={handleForceRefresh}
       />
+
+      {/* Debug Info in Development */}
+      {__DEV__ && (
+        <View style={styles.debugContainer}>
+          <Text style={styles.debugText}>
+            📊 Debug: {notifications.length} notifications |
+            {isLoading ? " Loading..." : " Ready"} | Unread: {unreadCount}
+          </Text>
+          <Text style={styles.debugSubText}>
+            Pull down to force refresh or use refresh button
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -162,7 +228,7 @@ const styles = StyleSheet.create({
   actionBar: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
@@ -172,14 +238,46 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     borderRadius: 8,
     backgroundColor: "#f8f8f8",
+    flex: 1,
+    marginHorizontal: 3,
+    justifyContent: "center",
+    minHeight: 40,
+  },
+  refreshButton: {
+    backgroundColor: "#e3f2fd",
+  },
+  disabledButton: {
+    backgroundColor: "#f0f0f0",
+    opacity: 0.6,
   },
   actionButtonText: {
-    marginLeft: 8,
-    fontSize: 14,
+    marginLeft: 6,
+    fontSize: 12,
     fontWeight: "500",
     color: "#174d3c",
+  },
+  disabledText: {
+    color: "#999",
+  },
+  debugContainer: {
+    backgroundColor: "#e8f5e8",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#d0d0d0",
+  },
+  debugText: {
+    fontSize: 11,
+    color: "#174d3c",
+    fontFamily: "monospace",
+    marginBottom: 2,
+  },
+  debugSubText: {
+    fontSize: 10,
+    color: "#666",
+    fontFamily: "monospace",
   },
 });

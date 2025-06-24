@@ -6,7 +6,8 @@ export const authService = {
     const apiData = {
       email: userData.email,
       password: userData.password,
-      display_name: userData.name,
+      display_name: userData.display_name,
+      group: userData.group,
     };
 
     return await apiRequest("/auth/register", {
