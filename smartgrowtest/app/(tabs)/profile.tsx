@@ -39,10 +39,9 @@ export default function ProfileScreen() {
   const [showAddPlant, setShowAddPlant] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
 
-  // Plant form states - enhanced with new fields
+  // Plant form states - removed plantType from state since it's fixed to "vegetable"
   const [plantName, setPlantName] = useState("");
   const [group, setGroup] = useState(user?.groupNumber || "Group 10");
-  const [plantType, setPlantType] = useState("");
   const [zone, setZone] = useState("");
   const [moisturePin, setMoisturePin] = useState("");
   const [description, setDescription] = useState("");
@@ -50,8 +49,7 @@ export default function ProfileScreen() {
   const [moistureMinThreshold, setMoistureMinThreshold] = useState("30");
   const [moistureMaxThreshold, setMoistureMaxThreshold] = useState("70");
 
-  // Dropdown states
-  const [showPlantTypeDropdown, setShowPlantTypeDropdown] = useState(false);
+  // Dropdown states - removed showPlantTypeDropdown since Plant Type dropdown is removed
   const [showZoneDropdown, setShowZoneDropdown] = useState(false);
   const [showPinDropdown, setShowPinDropdown] = useState(false);
 
@@ -61,7 +59,7 @@ export default function ProfileScreen() {
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
 
-  // Dropdown options with proper typing
+  // Dropdown options with proper typing - removed plantTypeOptions
   const zoneOptions: DropdownOption[] = [
     { label: "Zone 1", value: "zone1" },
     { label: "Zone 2", value: "zone2" },
@@ -74,11 +72,6 @@ export default function ProfileScreen() {
     { label: "Pin 35", value: "35" },
     { label: "Pin 36", value: "36" },
     { label: "Pin 39", value: "39" },
-  ];
-
-  const plantTypeOptions: DropdownOption[] = [
-    { label: "Chilli", value: "chilli" },
-    { label: "Eggplant", value: "eggplant" },
   ];
 
   // Custom Dropdown Component
@@ -102,7 +95,6 @@ export default function ProfileScreen() {
           onPress={() => {
             // Close other dropdowns first
             if (!isOpen) {
-              setShowPlantTypeDropdown(false);
               setShowZoneDropdown(false);
               setShowPinDropdown(false);
             }
@@ -202,21 +194,21 @@ export default function ProfileScreen() {
   // Reset plant form
   const resetPlantForm = () => {
     setPlantName("");
-    setPlantType("");
+    // plantType is always "vegetable" now, no need to reset
     setZone("");
     setMoisturePin("");
     setDescription("");
     setImageUrl("");
     setMoistureMinThreshold("30");
     setMoistureMaxThreshold("70");
-    setShowPlantTypeDropdown(false);
+    // removed setShowPlantTypeDropdown(false);
     setShowZoneDropdown(false);
     setShowPinDropdown(false);
   };
 
   // Submit plant form - enhanced with API integration and validation
   const handleSubmitPlant = async () => {
-    // Prepare form data for validation
+    // Prepare form data for validation - plantType is always "vegetable"
     const formData = {
       name: plantName,
       zone: zone,
@@ -226,6 +218,7 @@ export default function ProfileScreen() {
       moistureMinThreshold: moistureMinThreshold,
       moistureMaxThreshold: moistureMaxThreshold,
       userId: user?.id || "demo-user",
+      type: "vegetable", // Fixed type as per API requirement
     };
 
     // Use plant service validation
@@ -385,7 +378,7 @@ export default function ProfileScreen() {
     );
   }
 
-  // Add Plant View - Enhanced with new fields
+  // Add Plant View - Enhanced with new fields (Plant Type section removed)
   if (showAddPlant) {
     return (
       <View style={styles.container}>
@@ -419,17 +412,6 @@ export default function ProfileScreen() {
               onChangeText={setPlantName}
               placeholderTextColor="#aaa"
               editable={!loading}
-            />
-
-            <Text style={styles.inputLabel}>Plant Type</Text>
-            <CustomDropdown
-              placeholder="Select Plant Type"
-              value={plantType}
-              options={plantTypeOptions}
-              onSelect={setPlantType}
-              isOpen={showPlantTypeDropdown}
-              setIsOpen={setShowPlantTypeDropdown}
-              zIndex={3000}
             />
 
             <Text style={styles.inputLabel}>Zone *</Text>
@@ -807,6 +789,24 @@ const styles = StyleSheet.create({
     height: 80,
     textAlignVertical: "top",
     paddingTop: 12,
+  },
+
+  // New styles for plant type info message
+  plantTypeInfo: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#e8f5e8",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  plantTypeInfoText: {
+    fontSize: 14,
+    color: "#174d3c",
+    marginLeft: 8,
+    flex: 1,
+    lineHeight: 18,
+    fontWeight: "500",
   },
 
   // Enhanced threshold styles
