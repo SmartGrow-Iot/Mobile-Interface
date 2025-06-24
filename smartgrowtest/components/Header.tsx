@@ -1,4 +1,4 @@
-// components/Header.tsx - Complete Header with notification support
+// components/Header.tsx - Header without notification support
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -12,8 +12,6 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, usePathname } from "expo-router";
-import { useNotifications } from "../hooks/useNotifications";
-import { NotificationIcon } from "./features/notifications/NotificationIcon";
 
 type BreadcrumbItem = {
   label: string;
@@ -33,7 +31,6 @@ type HeaderProps = {
   showBackButton?: boolean;
   showSearch?: boolean;
   showProfile?: boolean;
-  showNotifications?: boolean; // New prop for notification icon
   breadcrumbs?: BreadcrumbItem[];
   customBreadcrumbs?: BreadcrumbItem[];
 };
@@ -136,120 +133,6 @@ const searchData: SearchResult[] = [
     type: "zone",
     icon: "🍆",
   },
-
-  // Plants
-  {
-    title: "Chili Plant 1",
-    subtitle: "Zone A - CP-1",
-    route: "/plants/CP-1",
-    type: "plant",
-    icon: "🌶️",
-  },
-  {
-    title: "Chili Plant 2",
-    subtitle: "Zone A - CP-2",
-    route: "/plants/CP-2",
-    type: "plant",
-    icon: "🌶️",
-  },
-  {
-    title: "Chili Plant 3",
-    subtitle: "Zone A - CP-3",
-    route: "/plants/CP-3",
-    type: "plant",
-    icon: "🌶️",
-  },
-  {
-    title: "Chili Plant 4",
-    subtitle: "Zone A - CP-4",
-    route: "/plants/CP-4",
-    type: "plant",
-    icon: "🌶️",
-  },
-  {
-    title: "Chili Plant 5",
-    subtitle: "Zone B - CP-5",
-    route: "/plants/CP-5",
-    type: "plant",
-    icon: "🌶️",
-  },
-  {
-    title: "Chili Plant 6",
-    subtitle: "Zone B - CP-6",
-    route: "/plants/CP-6",
-    type: "plant",
-    icon: "🌶️",
-  },
-  {
-    title: "Chili Plant 7",
-    subtitle: "Zone B - CP-7",
-    route: "/plants/CP-7",
-    type: "plant",
-    icon: "🌶️",
-  },
-  {
-    title: "Chili Plant 8",
-    subtitle: "Zone B - CP-8",
-    route: "/plants/CP-8",
-    type: "plant",
-    icon: "🌶️",
-  },
-  {
-    title: "Eggplant 1",
-    subtitle: "Zone C - EP-1",
-    route: "/plants/EP-1",
-    type: "plant",
-    icon: "🍆",
-  },
-  {
-    title: "Eggplant 2",
-    subtitle: "Zone C - EP-2",
-    route: "/plants/EP-2",
-    type: "plant",
-    icon: "🍆",
-  },
-  {
-    title: "Eggplant 3",
-    subtitle: "Zone C - EP-3",
-    route: "/plants/EP-3",
-    type: "plant",
-    icon: "🍆",
-  },
-  {
-    title: "Eggplant 4",
-    subtitle: "Zone C - EP-4",
-    route: "/plants/EP-4",
-    type: "plant",
-    icon: "🍆",
-  },
-  {
-    title: "Eggplant 5",
-    subtitle: "Zone D - EP-5",
-    route: "/plants/EP-5",
-    type: "plant",
-    icon: "🍆",
-  },
-  {
-    title: "Eggplant 6",
-    subtitle: "Zone D - EP-6",
-    route: "/plants/EP-6",
-    type: "plant",
-    icon: "🍆",
-  },
-  {
-    title: "Eggplant 7",
-    subtitle: "Zone D - EP-7",
-    route: "/plants/EP-7",
-    type: "plant",
-    icon: "🍆",
-  },
-  {
-    title: "Eggplant 8",
-    subtitle: "Zone D - EP-8",
-    route: "/plants/EP-8",
-    type: "plant",
-    icon: "🍆",
-  },
 ];
 
 export default function Header({
@@ -257,13 +140,11 @@ export default function Header({
   showBackButton = false,
   showSearch = false,
   showProfile = false,
-  showNotifications = false, // Default false for backward compatibility
   breadcrumbs,
   customBreadcrumbs,
 }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { unreadCount } = useNotifications(); // Get unread notification count
 
   // Search state
   const [isSearchVisible, setIsSearchVisible] = useState(false);
@@ -369,10 +250,6 @@ export default function Header({
     handleSearchClose();
   };
 
-  const handleNotificationsPress = () => {
-    router.push("/notifications");
-  };
-
   const getTypeColor = (type: string) => {
     switch (type) {
       case "page":
@@ -439,15 +316,6 @@ export default function Header({
             >
               <Ionicons name="search" size={22} color="#174d3c" />
             </TouchableOpacity>
-          )}
-          {/* Notification Icon - NEW */}
-          {showNotifications && (
-            <NotificationIcon
-              unreadCount={unreadCount}
-              onPress={handleNotificationsPress}
-              iconColor="#174d3c"
-              iconSize={22}
-            />
           )}
           {showProfile && (
             <TouchableOpacity

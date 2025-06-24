@@ -647,6 +647,7 @@ export default function ActuatorOverride() {
             const newValue = isCurrentlyOn ? "OFF" : "ON";
 
             const actuatorCalledInAPI = type === "watering" ? "water" : type;
+            const assignedZone = actuatorCalledInAPI === "water" ? zone : "zone1";
             const actuatorActionToDoInAPI = `${actuatorCalledInAPI}_${isCurrentlyOn ? 'off' : 'on'}`;
         if (!currentActuatorId) {
             console.log("using current actuatorIds: ", actuatorIds);
@@ -670,7 +671,7 @@ export default function ActuatorOverride() {
               trigger: "manual",
               triggerBy: user?.id || "unknown_user",
               timestamp: new Date().toISOString(),
-              zone: zone
+              zone: assignedZone
            };
            console.log(
                `Sending ${actuatorActionToDoInAPI} request for plant ${plantId}:`,
@@ -720,7 +721,7 @@ export default function ActuatorOverride() {
                 trigger: "manual",
                 triggerBy: user?.id || "unknown_user",
                 timestamp: new Date().toISOString(),
-                zone: zone
+                zone: assignedZone
               };
 
               console.log(
