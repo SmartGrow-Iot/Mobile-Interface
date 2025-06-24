@@ -19,11 +19,23 @@ export const apiRequest = async (endpoint, options = {}) => {
   };
 
   try {
+    console.log("🔐 Sending token:", token?.substring(0, 30) + "...");
+    console.log("📡 Calling:", url);
     const response = await fetch(url, config);
-    const data = await response.json();
+
+    const contentType = response.headers.get("content-type");
+    let data = null;
+
+    if (contentType && contentType.includes("application/json")) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      console.warn("⚠️ Response is not JSON. Raw text:", text.slice(0, 100));
+      throw new Error("Server returned non-JSON response");
+    }
 
     if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+      throw new Error(data?.message || `HTTP error! status: ${response.status}`);
     }
 
     return data;
