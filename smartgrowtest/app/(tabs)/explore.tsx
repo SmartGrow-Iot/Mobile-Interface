@@ -153,7 +153,12 @@ export default function ExploreScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title="Explore" showSearch={true} showProfile={true} />
+      <Header
+        title="Explore"
+        showSearch={true}
+        showProfile={true}
+        showNotifications={true}
+      />
 
       <ScrollView style={styles.content}>
         <Text style={styles.header}>Get Started</Text>

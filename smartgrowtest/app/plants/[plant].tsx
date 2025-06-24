@@ -1,4 +1,4 @@
-// app/plants/[plant].tsx - Updated to use only API data
+// app/plants/[plant].tsx - Fixed version with proper variable declaration order
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -108,11 +108,31 @@ export default function PlantProfile() {
     }
   };
 
+  // Create custom breadcrumbs based on plant data (moved up)
+  const customBreadcrumbs = plantDetails
+    ? [
+        { label: "Home", route: "/" },
+        {
+          label: PlantHelpers.getZoneDisplayName(plantDetails.zone),
+          route: `/plants/zone/${plantDetails.zone}`,
+        },
+        { label: plantDetails.name },
+      ]
+    : [{ label: "Home", route: "/" }, { label: "Plant Details" }];
+
   // Loading state
   if (loading) {
     return (
       <View style={styles.container}>
-        <Header title="Plant Profile" showBackButton={true} />
+        <Header
+          title="Plant Details"
+          showBackButton={true}
+          showNotifications={true}
+          customBreadcrumbs={[
+            { label: "Home", route: "/" },
+            { label: "Plant Details" },
+          ]}
+        />
         <LoadingSpinner text="Loading plant data..." />
       </View>
     );
@@ -122,7 +142,11 @@ export default function PlantProfile() {
   if (error || !plantDetails) {
     return (
       <View style={styles.container}>
-        <Header title="Plant Not Found" showBackButton={true} />
+        <Header
+          title="Plant Not Found"
+          showBackButton={true}
+          showNotifications={true}
+        />
         <View style={styles.content}>
           <EmptyState
             icon="leaf-outline"
@@ -137,22 +161,13 @@ export default function PlantProfile() {
     );
   }
 
-  // Custom breadcrumbs
-  const customBreadcrumbs = [
-    { label: "Home", route: "/" },
-    {
-      label: PlantHelpers.getZoneDisplayName(plantDetails.zone),
-      route: `/plants/zone/${plantDetails.zone}`,
-    },
-    { label: plantDetails.name },
-  ];
-
   return (
     <View style={styles.container}>
       {/* Header Component */}
       <Header
         title="Plant Details"
         showBackButton={true}
+        showNotifications={true}
         customBreadcrumbs={customBreadcrumbs}
       />
 

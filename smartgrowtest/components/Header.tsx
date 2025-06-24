@@ -1,4 +1,4 @@
-// components/Header.tsx - Header without notification support
+// components/Header.tsx - Header with fixed search and notification support
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -9,9 +9,11 @@ import {
   Modal,
   ScrollView,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, usePathname } from "expo-router";
+import { apiRequest } from "../services/api";
 
 type BreadcrumbItem = {
   label: string;
@@ -24,6 +26,8 @@ type SearchResult = {
   route: string;
   type: "page" | "sensor" | "plant" | "zone";
   icon?: string;
+  plantId?: string;
+  zoneId?: string;
 };
 
 type HeaderProps = {
@@ -31,12 +35,13 @@ type HeaderProps = {
   showBackButton?: boolean;
   showSearch?: boolean;
   showProfile?: boolean;
+  showNotifications?: boolean;
   breadcrumbs?: BreadcrumbItem[];
   customBreadcrumbs?: BreadcrumbItem[];
 };
 
-// Search data - you can expand this with more content from your app
-const searchData: SearchResult[] = [
+// Static search data for pages and sensors
+const staticSearchData: SearchResult[] = [
   // Pages
   {
     title: "My Plants",
@@ -85,14 +90,14 @@ const searchData: SearchResult[] = [
   {
     title: "Air Quality Sensor",
     subtitle: "Monitor air quality",
-    route: "/sensors/airquality",
+    route: "/sensors/airQuality",
     type: "sensor",
     icon: "🌬️",
   },
   {
     title: "Temperature Sensor",
     subtitle: "Monitor temperature",
-    route: "/sensors/temperature",
+    route: "/sensors/temp",
     type: "sensor",
     icon: "🌡️",
   },
@@ -103,36 +108,6 @@ const searchData: SearchResult[] = [
     type: "sensor",
     icon: "💧",
   },
-
-  // Zones
-  {
-    title: "Zone A",
-    subtitle: "Chili plants area",
-    route: "/plants/zone/Zone A",
-    type: "zone",
-    icon: "🌶️",
-  },
-  {
-    title: "Zone B",
-    subtitle: "Chili plants area",
-    route: "/plants/zone/Zone B",
-    type: "zone",
-    icon: "🌶️",
-  },
-  {
-    title: "Zone C",
-    subtitle: "Eggplant area",
-    route: "/plants/zone/Zone C",
-    type: "zone",
-    icon: "🍆",
-  },
-  {
-    title: "Zone D",
-    subtitle: "Eggplant area",
-    route: "/plants/zone/Zone D",
-    type: "zone",
-    icon: "🍆",
-  },
 ];
 
 export default function Header({
@@ -140,6 +115,7 @@ export default function Header({
   showBackButton = false,
   showSearch = false,
   showProfile = false,
+  showNotifications = false,
   breadcrumbs,
   customBreadcrumbs,
 }: HeaderProps) {
@@ -150,6 +126,134 @@ export default function Header({
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [dynamicSearchData, setDynamicSearchData] = useState<SearchResult[]>(
+    []
+  );
+
+  // Fetch dynamic search data (zones and plants) from API
+  const fetchDynamicSearchData = async () => {
+    try {
+      const zones = ["zone1", "zone2", "zone3", "zone4"];
+      const allResults: SearchResult[] = [];
+
+      // Add zones
+      for (const zoneId of zones) {
+        const zoneDisplayName = getZoneDisplayName(zoneId);
+        allResults.push({
+          title: zoneDisplayName,
+          subtitle: "Plant growing zone",
+          route: `/plants/zone/${zoneId}`,
+          type: "zone",
+          icon: getZoneIcon(zoneId),
+          zoneId: zoneId,
+        });
+
+        try {
+          // Fetch plants for each zone
+          const zoneResponse = await apiRequest(`/zones/${zoneId}/plants`);
+          const plants = zoneResponse?.plants || [];
+
+          // Add plants from this zone
+          plants.forEach((plant: any) => {
+            allResults.push({
+              title: plant.name,
+              subtitle: `${plant.type} in ${zoneDisplayName}`,
+              route: `/plants/${plant.plantId}`,
+              type: "plant",
+              icon: getPlantIcon(plant.zone),
+              plantId: plant.plantId,
+              zoneId: plant.zone,
+            });
+          });
+        } catch (error) {
+          console.log(`Failed to fetch plants for ${zoneId}:`, error);
+        }
+      }
+
+      setDynamicSearchData(allResults);
+    } catch (error) {
+      console.error("Error fetching dynamic search data:", error);
+    }
+  };
+
+  // Helper functions
+  const getZoneDisplayName = (zoneId: string): string => {
+    const zoneMap: Record<string, string> = {
+      zone1: "Zone 1",
+      zone2: "Zone 2",
+      zone3: "Zone 3",
+      zone4: "Zone 4",
+    };
+    return zoneMap[zoneId] || zoneId;
+  };
+
+  const getZoneIcon = (zoneId: string): string => {
+    // You can customize this based on your zone setup
+    switch (zoneId) {
+      case "zone1":
+      case "zone2":
+        return "🌶️"; // Chili zones
+      case "zone3":
+      case "zone4":
+        return "🍆"; // Eggplant zones
+      default:
+        return "🏢"; // Default zone
+    }
+  };
+
+  const getPlantIcon = (zoneId: string): string => {
+    return zoneId === "zone1" || zoneId === "zone2" ? "🌶️" : "🍆";
+  };
+
+  // Search functionality
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearchLoading(true);
+
+    // Combine static and dynamic search data
+    const allSearchData = [...staticSearchData, ...dynamicSearchData];
+
+    // Filter results based on query
+    const filteredResults = allSearchData.filter((item) => {
+      const queryLower = searchQuery.toLowerCase();
+      const titleMatch = item.title.toLowerCase().includes(queryLower);
+      const subtitleMatch = item.subtitle?.toLowerCase().includes(queryLower);
+
+      return titleMatch || subtitleMatch;
+    });
+
+    // Sort results by relevance (exact matches first, then contains)
+    const sortedResults = filteredResults.sort((a, b) => {
+      const aExact = a.title
+        .toLowerCase()
+        .startsWith(searchQuery.toLowerCase());
+      const bExact = b.title
+        .toLowerCase()
+        .startsWith(searchQuery.toLowerCase());
+
+      if (aExact && !bExact) return -1;
+      if (!aExact && bExact) return 1;
+
+      // Secondary sort by type priority (plants first, then zones, then pages, then sensors)
+      const typePriority = { plant: 0, zone: 1, page: 2, sensor: 3 };
+      return (typePriority[a.type] || 4) - (typePriority[b.type] || 4);
+    });
+
+    setSearchResults(sortedResults.slice(0, 12)); // Limit to 12 results
+    setSearchLoading(false);
+  }, [searchQuery, dynamicSearchData]);
+
+  // Load dynamic search data when search is opened
+  useEffect(() => {
+    if (isSearchVisible && dynamicSearchData.length === 0) {
+      fetchDynamicSearchData();
+    }
+  }, [isSearchVisible]);
 
   // Auto-generate breadcrumbs based on current path if not provided
   const generateBreadcrumbs = (): BreadcrumbItem[] => {
@@ -169,8 +273,8 @@ export default function Header({
       notifications: "Notifications",
       light: "Light Sensor",
       soil: "Soil Sensor",
-      airquality: "Air Quality Sensor",
-      temperature: "Temperature Sensor",
+      airQuality: "Air Quality Sensor",
+      temp: "Temperature Sensor",
       humidity: "Humidity Sensor",
     };
 
@@ -198,39 +302,9 @@ export default function Header({
     return crumbs;
   };
 
-  // Search functionality
-  useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setSearchResults([]);
-      return;
-    }
-
-    const filteredResults = searchData.filter(
-      (item) =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.subtitle &&
-          item.subtitle.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-
-    // Sort results by relevance (exact matches first, then contains)
-    const sortedResults = filteredResults.sort((a, b) => {
-      const aExact = a.title
-        .toLowerCase()
-        .startsWith(searchQuery.toLowerCase());
-      const bExact = b.title
-        .toLowerCase()
-        .startsWith(searchQuery.toLowerCase());
-
-      if (aExact && !bExact) return -1;
-      if (!aExact && bExact) return 1;
-      return 0;
-    });
-
-    setSearchResults(sortedResults.slice(0, 8)); // Limit to 8 results
-  }, [searchQuery]);
-
   const breadcrumbItems = generateBreadcrumbs();
 
+  // Event handlers
   const handleBreadcrumbPress = (route: string) => {
     router.push(route as any);
   };
@@ -248,6 +322,10 @@ export default function Header({
   const handleSearchResultPress = (result: SearchResult) => {
     router.push(result.route as any);
     handleSearchClose();
+  };
+
+  const handleNotificationPress = () => {
+    router.push("/notifications");
   };
 
   const getTypeColor = (type: string) => {
@@ -317,6 +395,24 @@ export default function Header({
               <Ionicons name="search" size={22} color="#174d3c" />
             </TouchableOpacity>
           )}
+          {showNotifications && (
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={handleNotificationPress}
+            >
+              <View style={styles.notificationContainer}>
+                <Ionicons
+                  name="notifications-outline"
+                  size={22}
+                  color="#174d3c"
+                />
+                {/* Optional: Add notification badge here */}
+                {/* <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>3</Text>
+                </View> */}
+              </View>
+            </TouchableOpacity>
+          )}
           {showProfile && (
             <TouchableOpacity
               style={styles.iconButton}
@@ -375,12 +471,19 @@ export default function Header({
                 />
                 <TextInput
                   style={styles.searchInput}
-                  placeholder="Search plants, sensors, zones..."
+                  placeholder="Search plants, zones, sensors..."
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   autoFocus={true}
                   placeholderTextColor="#999"
                 />
+                {searchLoading && (
+                  <ActivityIndicator
+                    size="small"
+                    color="#174d3c"
+                    style={styles.searchLoader}
+                  />
+                )}
               </View>
               <TouchableOpacity
                 style={styles.searchCloseButton}
@@ -402,49 +505,62 @@ export default function Header({
                     Start typing to search
                   </Text>
                   <Text style={styles.searchEmptySubtext}>
-                    Find plants, sensors, zones, and pages
+                    Find plants, zones, sensors, and pages
                   </Text>
+                </View>
+              ) : searchLoading ? (
+                <View style={styles.searchEmptyState}>
+                  <ActivityIndicator size="large" color="#174d3c" />
+                  <Text style={styles.searchEmptyText}>Searching...</Text>
                 </View>
               ) : searchResults.length === 0 ? (
                 <View style={styles.searchEmptyState}>
                   <Ionicons name="sad-outline" size={48} color="#ccc" />
                   <Text style={styles.searchEmptyText}>No results found</Text>
                   <Text style={styles.searchEmptySubtext}>
-                    Try searching for something else
+                    Try searching for plant names, zones, or sensors
                   </Text>
                 </View>
               ) : (
-                searchResults.map((result, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.searchResultItem}
-                    onPress={() => handleSearchResultPress(result)}
-                  >
-                    <View style={styles.searchResultLeft}>
-                      <Text style={styles.searchResultIcon}>{result.icon}</Text>
-                      <View style={styles.searchResultContent}>
-                        <Text style={styles.searchResultTitle}>
-                          {result.title}
-                        </Text>
-                        {result.subtitle && (
-                          <Text style={styles.searchResultSubtitle}>
-                            {result.subtitle}
-                          </Text>
-                        )}
-                      </View>
-                    </View>
-                    <View
-                      style={[
-                        styles.searchResultBadge,
-                        { backgroundColor: getTypeColor(result.type) },
-                      ]}
+                <>
+                  <Text style={styles.searchResultsHeader}>
+                    Found {searchResults.length} result
+                    {searchResults.length !== 1 ? "s" : ""}
+                  </Text>
+                  {searchResults.map((result, index) => (
+                    <TouchableOpacity
+                      key={`${result.type}-${result.title}-${index}`}
+                      style={styles.searchResultItem}
+                      onPress={() => handleSearchResultPress(result)}
                     >
-                      <Text style={styles.searchResultBadgeText}>
-                        {getTypeBadge(result.type)}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))
+                      <View style={styles.searchResultLeft}>
+                        <Text style={styles.searchResultIcon}>
+                          {result.icon}
+                        </Text>
+                        <View style={styles.searchResultContent}>
+                          <Text style={styles.searchResultTitle}>
+                            {result.title}
+                          </Text>
+                          {result.subtitle && (
+                            <Text style={styles.searchResultSubtitle}>
+                              {result.subtitle}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                      <View
+                        style={[
+                          styles.searchResultBadge,
+                          { backgroundColor: getTypeColor(result.type) },
+                        ]}
+                      >
+                        <Text style={styles.searchResultBadgeText}>
+                          {getTypeBadge(result.type)}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </>
               )}
             </ScrollView>
           </View>
@@ -506,6 +622,25 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 8,
     marginLeft: 8,
+  },
+  notificationContainer: {
+    position: "relative",
+  },
+  notificationBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    backgroundColor: "#e74c3c",
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  notificationBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
   },
   breadcrumbContainer: {
     flexDirection: "row",
@@ -572,6 +707,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
   },
+  searchLoader: {
+    marginLeft: 8,
+  },
   searchCloseButton: {
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -584,6 +722,13 @@ const styles = StyleSheet.create({
   searchResults: {
     flex: 1,
     paddingHorizontal: 20,
+  },
+  searchResultsHeader: {
+    fontSize: 14,
+    color: "#666",
+    fontWeight: "500",
+    marginVertical: 12,
+    paddingLeft: 4,
   },
   searchEmptyState: {
     alignItems: "center",

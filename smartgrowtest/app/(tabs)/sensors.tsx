@@ -55,7 +55,12 @@ export default function SensorsScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title="Sensors" showSearch={true} showProfile={true} />
+      <Header
+        title="Sensors"
+        showSearch={true}
+        showProfile={true}
+        showNotifications={true}
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* Environmental Sensors Section */}

@@ -180,10 +180,14 @@ export default function SensorDetail() {
   };
 
   // Early returns for loading and error states
-  if (!sensorConfig) {
+  if (!sensorConfig.name) {
     return (
       <View style={styles.container}>
-        <Header title="Sensor Not Found" showBackButton />
+        <Header
+          title={sensorConfig.name || "Sensor Config"}
+          showBackButton={true}
+          showNotifications={true}
+        />
         <EmptyState icon="hardware-chip-outline" title="Sensor not supported" />
       </View>
     );

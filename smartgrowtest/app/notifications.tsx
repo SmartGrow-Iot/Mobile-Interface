@@ -9,7 +9,6 @@ export default function NotificationsScreen() {
 
   const customBreadcrumbs = [
     { label: "Home", route: "/" },
-    { label: "Profile", route: "/(tabs)/profile" },
     { label: "Notifications" },
   ];
 

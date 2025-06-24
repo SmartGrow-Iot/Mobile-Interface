@@ -542,7 +542,11 @@ export default function ProfileScreen() {
   // Main Profile View
   return (
     <View style={styles.container}>
-      <Header title="Profile" showSearch={true} />
+      <Header
+        title="Profile"
+        showSearch={true}
+        showNotifications={true} 
+      />
 
       <ScrollView style={styles.content}>
         {loading && (

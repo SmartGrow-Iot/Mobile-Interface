@@ -98,7 +98,12 @@ export default function HomePage() {
 
   return (
     <View style={styles.container}>
-      <Header title="My Plants" showSearch={true} showProfile={true} />
+      <Header
+        title="My Plants"
+        showSearch={true}
+        showProfile={true}
+        showNotifications={true} 
+      />
 
       <ScrollView
         style={styles.content}

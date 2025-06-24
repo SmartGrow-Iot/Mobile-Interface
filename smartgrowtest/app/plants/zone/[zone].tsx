@@ -139,6 +139,7 @@ export default function ZoneScreen() {
       <Header
         title={zoneData.name}
         showBackButton={true}
+        showNotifications={true} 
         customBreadcrumbs={customBreadcrumbs}
       />
 
