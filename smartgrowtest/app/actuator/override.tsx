@@ -27,6 +27,13 @@ type ThresholdSettings = {
     light: { value: string; unit: string[] };
 };
 
+type ActuatorState = "ON" | "OFF";
+type ThresholdStatus = {
+  light: ActuatorState;
+  watering: ActuatorState;
+  fan: ActuatorState;
+};
+
 export default function ActuatorOverride() {
     const { zone, plant, plantId, actuatorId, actuatorType } =
         useLocalSearchParams();
@@ -149,6 +156,66 @@ export default function ActuatorOverride() {
         light: { value: "OFF", unit: ["s", "%", "%"] },
     });
 
+    const [status, setStatus] = useState<ThresholdStatus>({
+        light: "OFF",
+        watering: "OFF",
+        fan: "OFF",
+    });
+
+    useEffect(() => {
+        const fetchLatestStatus = async () => {
+            try {
+                // Fetch for light and fan from zone1
+                const logsFanLight = await apiRequest("/logs/action/zone/zone1?sortBy=latest");
+                // Fetch for watering from custom zone
+                const logsWater = await apiRequest(`/logs/action/zone/${zone}?sortBy=latest`);
+                if (!Array.isArray(logsFanLight) || !Array.isArray(logsWater)) {
+                    console.error("Unexpected response format", { logsZone1: logsFanLight, logsWater });
+                    return;
+                }
+                let latest: {
+                    light: ActuatorState | null;
+                    watering: ActuatorState | null;
+                    fan: ActuatorState | null;
+                } = {
+                    light: null,
+                    watering: null,
+                    fan: null,
+                };
+                // Process logs from zone1 (light + fan only)
+                for (const log of logsFanLight) {
+                    if (!latest.light && log.action.startsWith("light")) {
+                        latest.light = log.action.endsWith("_on") ? "ON" : "OFF";
+                    }
+                    if (!latest.fan && log.action.startsWith("fan")) {
+                        latest.fan = log.action.endsWith("_on") ? "ON" : "OFF";
+                    }
+                    if (latest.light && latest.fan) break;
+                }
+                // Process logs from the custom zone (watering only)
+                for (const log of logsWater) {
+                    if (!latest.watering && log.action.startsWith("water")) {
+                        latest.watering = log.action.endsWith("_on") ? "ON" : "OFF";
+                    break;
+                    }
+                }
+                setStatus({
+                    light: latest.light ?? "OFF",
+                    watering: latest.watering ?? "OFF",
+                    fan: latest.fan ?? "OFF",
+                });
+                console.log("Final actuator statuses:", {
+                    light: latest.light ?? "OFF",
+                    watering: latest.watering ?? "OFF",
+                    fan: latest.fan ?? "OFF",
+                });
+            } catch (error) {
+                console.error("Error fetching actuator status logs:", error);
+            }
+        };
+        fetchLatestStatus();
+        }, []);
+
     // Input state for modal
     const [inputValue, setInputValue] = useState("");
 
@@ -193,7 +260,7 @@ export default function ActuatorOverride() {
         glowAnimMap[type] = new Animated.Value(0);
         }
 
-        const isOn = thresholds[type]?.value === "ON";
+        const isOn = status[type] === "ON";
 
         if (isOn) {
         Animated.loop(
@@ -215,13 +282,13 @@ export default function ActuatorOverride() {
         glowAnimMap[type].setValue(0); // reset glow
         }
     });
-    }, [thresholds]);
+    }, [status]);
 
     // Handle actuator button press
     const handleActuatorPress = (type: ThresholdType) => {
         setEnableIndex(0);
         setSelectedThreshold(type);
-        setInputValue(thresholds[type].value);
+        setInputValue(status[type]);
         setModalVisible(true);
     };
 
@@ -499,9 +566,7 @@ export default function ActuatorOverride() {
             `${
                 selectedThreshold.charAt(0).toUpperCase() +
                 selectedThreshold.slice(1)
-            } threshold updated to ${inputValue}${
-                thresholds[selectedThreshold].unit[enableIndex]
-            } [STARTING OVERRIDE!]`
+            } threshold updated, [STARTING OVERRIDE!]`
         );
     };
 
@@ -578,7 +643,7 @@ export default function ActuatorOverride() {
         console.log("TYPE: ", type);
         let currentActuatorId = actuatorId;
         console.log("initial actuatorId: ", currentActuatorId);
-            const isCurrentlyOn = thresholds[type].value === "ON";
+            const isCurrentlyOn = status[type] === "ON";
             const newValue = isCurrentlyOn ? "OFF" : "ON";
 
             const actuatorCalledInAPI = type === "watering" ? "water" : type;
@@ -631,13 +696,10 @@ export default function ActuatorOverride() {
            }
 
            // Update state only after successful API call
-           setThresholds((prev) => ({
-               ...prev,
-               [type]: {
-                   ...prev[type],
-                   value: newValue,
-               },
-           }));
+           setStatus((prev) => ({
+                ...prev,
+                [type]: newValue, // newValue is "ON" or "OFF"
+            }));
 
            console.log(
                `Successfully ${actuatorActionToDoInAPI} for plant ${plantId}`
@@ -685,12 +747,9 @@ export default function ActuatorOverride() {
               }
 
               // Update state only after successful API call
-              setThresholds((prev) => ({
-                  ...prev,
-                  [type]: {
-                      ...prev[type],
-                      value: newValue,
-                  },
+              setStatus((prev) => ({
+                ...prev,
+                [type]: newValue,
               }));
 
               console.log(
@@ -720,7 +779,7 @@ export default function ActuatorOverride() {
                 ...prev,
                 [type]: {
                     ...prev[type],
-                    value: thresholds[type].value
+                    value: status[type]
                 }
             }));
         }
@@ -850,7 +909,7 @@ export default function ActuatorOverride() {
                                 <Animated.View
                                 style={[
                                     styles.toggleButton,
-                                    thresholds[type].value === "ON" && {
+                                    status[type] === "ON" && {
                                     backgroundColor: glowingBackground,
                                     shadowColor: "#27ae60",
                                     shadowOffset: { width: 0, height: 0 },
@@ -863,12 +922,12 @@ export default function ActuatorOverride() {
                                 <TouchableOpacity
                                     style={[
                                     styles.toggleButton,
-                                    thresholds[type].value === "ON" && styles.toggleButtonActive,
+                                    status[type] === "ON" && styles.toggleButtonActive,
                                     ]}
                                     onPress={() => handleToggle(type)}
                                 >
                                     <Text style={styles.toggleButtonText}>
-                                    {thresholds[type].value}
+                                    {status[type]}
                                     </Text>
                                 </TouchableOpacity>
                                 </Animated.View>

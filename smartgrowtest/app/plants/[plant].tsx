@@ -111,17 +111,12 @@ export default function PlantProfile() {
   };
 
   // Get plant icon based on species or zone
-  const getPlantIcon = (species: string, zone: string): string => {
-    if (
-      species.toLowerCase().includes("chili") ||
-      species.toLowerCase().includes("pepper")
-    ) {
+  const getPlantIcon = (species: string | undefined, zone: string): string => {
+    const safeSpecies = species?.toLowerCase() || "";
+    if (safeSpecies.includes("chili") || safeSpecies.includes("pepper")) {
       return "🌶️";
     }
-    if (
-      species.toLowerCase().includes("eggplant") ||
-      species.toLowerCase().includes("aubergine")
-    ) {
+    if (safeSpecies.includes("eggplant") || safeSpecies.includes("aubergine")) {
       return "🍆";
     }
     // Fallback based on zone
@@ -131,7 +126,7 @@ export default function PlantProfile() {
     if (zone === "zone3" || zone === "zone4") {
       return "🍆";
     }
-    return "🌱"; // Default
+    return "🌱"; // Default fallback
   };
 
   // Loading state
