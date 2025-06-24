@@ -1,4 +1,3 @@
-// app/(tabs)/profile.tsx - Updated with enhanced add plant form
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -17,6 +16,22 @@ import { userService } from "../../services/userService";
 import { useNotifications } from "../../hooks/useNotifications";
 import Header from "../../components/Header";
 
+// Define interfaces at the top level
+interface DropdownOption {
+  label: string;
+  value: string;
+}
+
+interface CustomDropdownProps {
+  placeholder: string;
+  value: string;
+  options: DropdownOption[];
+  onSelect: (value: string) => void;
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+  zIndex?: number;
+}
+
 export default function ProfileScreen() {
   const { logout, user } = useAuth();
   const router = useRouter();
@@ -24,46 +39,109 @@ export default function ProfileScreen() {
   const [showAddPlant, setShowAddPlant] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
 
-  // Plant form states
+  // Plant form states - simplified
   const [plantName, setPlantName] = useState("");
   const [group, setGroup] = useState(user?.groupNumber || "Group 10");
   const [plantType, setPlantType] = useState("");
   const [zone, setZone] = useState("");
-  const [esp32Id, setEsp32Id] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
   const [moisturePin, setMoisturePin] = useState("");
-  const [careNotes, setCareNotes] = useState("");
-  const [growthTime, setGrowthTime] = useState("");
 
-  // Threshold states
-  const [thresholds, setThresholds] = useState({
-    moisture: { min: "", max: "" },
-    temperature: { min: "", max: "" },
-    light: { min: "", max: "" },
-    airQuality: { min: "", max: "" }
-  });
-
-  // Sensor selection and ID states
-  const [selectedSensors, setSelectedSensors] = useState({
-    light: false,
-    soil: false,
-    airquality: false,
-    temperature: false,
-    humidity: false,
-  });
-  const [sensorIds, setSensorIds] = useState({
-    light: "",
-    soil: "",
-    airquality: "",
-    temperature: "",
-    humidity: "",
-  });
+  // Dropdown states - ADD THE MISSING STATE
+  const [showPlantTypeDropdown, setShowPlantTypeDropdown] = useState(false);
+  const [showZoneDropdown, setShowZoneDropdown] = useState(false);
+  const [showPinDropdown, setShowPinDropdown] = useState(false);
 
   // Profile data states
-  const [profileData, setProfileData] = useState(null);
+  const [profileData, setProfileData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
+
+  // Dropdown options with proper typing
+  const zoneOptions: DropdownOption[] = [
+    { label: "Zone 1", value: "zone1" },
+    { label: "Zone 2", value: "zone2" },
+    { label: "Zone 3", value: "zone3" },
+    { label: "Zone 4", value: "zone4" },
+  ];
+
+  const pinOptions: DropdownOption[] = [
+    { label: "Pin 34", value: "34" },
+    { label: "Pin 35", value: "35" },
+    { label: "Pin 36", value: "36" },
+    { label: "Pin 39", value: "39" },
+  ];
+
+  const plantTypeOptions: DropdownOption[] = [
+    { label: "Chilli", value: "chilli" },
+    { label: "Eggplant", value: "eggplant" },
+  ];
+
+  // Custom Dropdown Component - MOVE BEFORE USAGE
+  const CustomDropdown: React.FC<CustomDropdownProps> = ({
+    placeholder,
+    value,
+    options,
+    onSelect,
+    isOpen,
+    setIsOpen,
+    zIndex = 1000,
+  }) => {
+    const selectedOption: DropdownOption | undefined = options.find(
+      (option: DropdownOption) => option.value === value
+    );
+
+    return (
+      <View style={[styles.dropdownContainer, { zIndex: isOpen ? zIndex : 1 }]}>
+        <TouchableOpacity
+          style={styles.dropdownButton}
+          onPress={() => {
+            // Close other dropdowns first
+            if (!isOpen) {
+              setShowPlantTypeDropdown(false);
+              setShowZoneDropdown(false);
+              setShowPinDropdown(false);
+            }
+            setIsOpen(!isOpen);
+          }}
+        >
+          <Text
+            style={[
+              styles.dropdownText,
+              !selectedOption && styles.placeholderText,
+            ]}
+          >
+            {selectedOption ? selectedOption.label : placeholder}
+          </Text>
+          <Ionicons
+            name={isOpen ? "chevron-up" : "chevron-down"}
+            size={20}
+            color="#999"
+          />
+        </TouchableOpacity>
+
+        {isOpen && (
+          <View style={styles.dropdownMenu}>
+            {options.map((option: DropdownOption) => (
+              <TouchableOpacity
+                key={option.value}
+                style={styles.dropdownItem}
+                onPress={() => {
+                  onSelect(option.value);
+                  setIsOpen(false);
+                }}
+              >
+                <Text style={styles.dropdownItemText}>{option.label}</Text>
+                {value === option.value && (
+                  <Ionicons name="checkmark" size={20} color="#174d3c" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
 
   // Fetch user profile data from API
   const fetchProfile = async () => {
@@ -71,11 +149,16 @@ export default function ProfileScreen() {
       setLoading(true);
       const data = await userService.getCurrentUser();
       setProfileData(data);
-      setEditName(data.display_name || "");
-      setEditEmail(data.email || "");
+      setEditName(data?.display_name || "");
+      setEditEmail(data?.email || "");
     } catch (error) {
       console.error("Error fetching profile:", error);
       Alert.alert("Error", "Failed to fetch profile data");
+      // Set default values on error
+      setProfileData({
+        display_name: user?.name || "User",
+        email: user?.email || "",
+      });
     } finally {
       setLoading(false);
     }
@@ -112,42 +195,7 @@ export default function ProfileScreen() {
     }
   };
 
-  // Handle sensor selection
-  const handleSensorPress = (sensorType: keyof typeof selectedSensors) => {
-    setSelectedSensors((prev) => ({
-      ...prev,
-      [sensorType]: !prev[sensorType],
-    }));
-
-    // Clear sensor ID if sensor is deselected
-    if (selectedSensors[sensorType]) {
-      setSensorIds((prev) => ({
-        ...prev,
-        [sensorType]: "",
-      }));
-    }
-  };
-
-  // Handle sensor ID input
-  const handleSensorIdChange = (sensorType: string, value: string) => {
-    setSensorIds((prev) => ({
-      ...prev,
-      [sensorType]: value,
-    }));
-  };
-
-  // Handle threshold changes
-  const handleThresholdChange = (type: keyof typeof thresholds, field: 'min' | 'max', value: string) => {
-    setThresholds((prev) => ({
-      ...prev,
-      [type]: {
-        ...prev[type],
-        [field]: value
-      }
-    }));
-  };
-
-  // Submit plant form
+  // Submit plant form - simplified
   const handleSubmitPlant = () => {
     // Validate required fields
     if (!plantName.trim()) {
@@ -155,60 +203,28 @@ export default function ProfileScreen() {
       return;
     }
     if (!zone.trim()) {
-      Alert.alert("Error", "Please enter zone");
+      Alert.alert("Error", "Please select a zone");
       return;
     }
     if (!moisturePin.trim()) {
-      Alert.alert("Error", "Please enter moisture pin");
+      Alert.alert("Error", "Please select a moisture pin");
       return;
     }
 
-    // Validate thresholds
-    const validateRange = (type: string, min: string, max: string) => {
-      const minVal = parseInt(min);
-      const maxVal = parseInt(max);
-      if (isNaN(minVal) || isNaN(maxVal)) {
-        Alert.alert("Error", `Please enter valid numbers for ${type} range`);
-        return false;
-      }
-      if (minVal >= maxVal) {
-        Alert.alert("Error", `${type} minimum must be less than maximum`);
-        return false;
-      }
-      return true;
-    };
-
-    if (!validateRange("Moisture", thresholds.moisture.min, thresholds.moisture.max) ||
-        !validateRange("Temperature", thresholds.temperature.min, thresholds.temperature.max) ||
-        !validateRange("Light", thresholds.light.min, thresholds.light.max) ||
-        !validateRange("Air Quality", thresholds.airQuality.min, thresholds.airQuality.max)) {
-      return;
-    }
-
-    // Prepare plant data according to API structure
+    // Prepare simplified plant data
     const plantData = {
       name: plantName.trim(),
       userId: user?.id || "demo-user",
       zone: zone.trim(),
       moisturePin: parseInt(moisturePin),
+      type: plantType.trim() || "vegetable",
+      species: plantType.trim() || "Unknown",
       thresholds: {
-        moisture: {
-          min: parseInt(thresholds.moisture.min),
-          max: parseInt(thresholds.moisture.max)
-        },
-        temperature: {
-          min: parseInt(thresholds.temperature.min),
-          max: parseInt(thresholds.temperature.max)
-        },
-        light: {
-          min: parseInt(thresholds.light.min),
-          max: parseInt(thresholds.light.max)
-        }
+        moisture: { min: 30, max: 70 },
+        temperature: { min: 20, max: 30 },
+        humidity: { min: 40, max: 70 },
+        light: { min: 50, max: 80 },
       },
-      type: "vegetable",
-      description: careNotes.trim() || "No description provided",
-      image: imageUrl.trim() || "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?q=80&w=1973&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      growthTime: parseInt(growthTime) || 30
     };
 
     console.log("Plant Data:", plantData);
@@ -218,31 +234,12 @@ export default function ProfileScreen() {
         onPress: () => {
           // Reset form
           setPlantName("");
-          setImageUrl("");
+          setPlantType("");
           setZone("");
           setMoisturePin("");
-          setCareNotes("");
-          setGrowthTime("");
-          setThresholds({
-            moisture: { min: "", max: "" },
-            temperature: { min: "", max: "" },
-            light: { min: "", max: "" },
-            airQuality: { min: "", max: "" }
-          });
-          setSelectedSensors({
-            light: false,
-            soil: false,
-            airquality: false,
-            temperature: false,
-            humidity: false,
-          });
-          setSensorIds({
-            light: "",
-            soil: "",
-            airquality: "",
-            temperature: "",
-            humidity: "",
-          });
+          setShowPlantTypeDropdown(false);
+          setShowZoneDropdown(false);
+          setShowPinDropdown(false);
           setShowAddPlant(false);
         },
       },
@@ -256,8 +253,15 @@ export default function ProfileScreen() {
 
   // Load profile data when component mounts
   useEffect(() => {
+    // Initialize profileData to prevent undefined errors
+    if (!profileData && user) {
+      setProfileData({
+        display_name: user.name || "User",
+        email: user.email || "",
+      });
+    }
     fetchProfile();
-  }, []);
+  }, [user]);
 
   const handleLogout = async () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -280,41 +284,7 @@ export default function ProfileScreen() {
     ]);
   };
 
-  // Sensor configurations
-  const sensorConfigs = {
-    light: {
-      icon: "sunny",
-      color: "#f7b731",
-      bgColor: "#fffbe6",
-      label: "Light Sensor",
-    },
-    soil: {
-      icon: "cube",
-      color: "#a0522d",
-      bgColor: "#f5eee6",
-      label: "Soil Sensor",
-    },
-    airquality: {
-      icon: "cloud-outline",
-      color: "#45aaf2",
-      bgColor: "#e6f7fb",
-      label: "CO2 Sensor",
-    },
-    temperature: {
-      icon: "thermometer-outline",
-      color: "#eb4d4b",
-      bgColor: "#fbeee6",
-      label: "Temperature Sensor",
-    },
-    humidity: {
-      icon: "water-outline",
-      color: "#45aaf2",
-      bgColor: "#e6f7fa",
-      label: "Humidity Sensor",
-    },
-  };
-
-  // Edit Profile View
+  // Edit Profile View (unchanged)
   if (showEditProfile) {
     return (
       <View style={styles.container}>
@@ -388,7 +358,7 @@ export default function ProfileScreen() {
     );
   }
 
-  // Add Plant View (Enhanced)
+  // Add Plant View - Updated with dropdowns
   if (showAddPlant) {
     return (
       <View style={styles.container}>
@@ -403,7 +373,9 @@ export default function ProfileScreen() {
         />
 
         <ScrollView style={styles.content}>
-          <Text style={[styles.subHeader, styles.plantInfoHeader]}>Plant Information</Text>
+          <Text style={[styles.subHeader, styles.plantInfoHeader]}>
+            Plant Information
+          </Text>
           <View style={styles.addPlantCardContainer}>
             <Text style={styles.inputLabel}>Plant Name</Text>
             <TextInput
@@ -414,147 +386,38 @@ export default function ProfileScreen() {
               placeholderTextColor="#aaa"
             />
 
-            <Text style={styles.inputLabel}>Image URL</Text>
-            <TextInput
-              style={styles.inputModern}
-              placeholder="Enter Image URL"
-              value={imageUrl}
-              onChangeText={setImageUrl}
-              placeholderTextColor="#aaa"
+            <Text style={styles.inputLabel}>Plant Type</Text>
+            <CustomDropdown
+              placeholder="Select Plant Type"
+              value={plantType}
+              options={plantTypeOptions}
+              onSelect={setPlantType}
+              isOpen={showPlantTypeDropdown}
+              setIsOpen={setShowPlantTypeDropdown}
+              zIndex={3000}
             />
 
             <Text style={styles.inputLabel}>Zone</Text>
-            <TextInput
-              style={styles.inputModern}
-              placeholder="Zone"
+            <CustomDropdown
+              placeholder="Select Zone"
               value={zone}
-              onChangeText={setZone}
-              placeholderTextColor="#aaa"
+              options={zoneOptions}
+              onSelect={setZone}
+              isOpen={showZoneDropdown}
+              setIsOpen={setShowZoneDropdown}
+              zIndex={2000}
             />
 
             <Text style={styles.inputLabel}>Moisture Pin</Text>
-            <TextInput
-              style={styles.inputModern}
-              placeholder="Moisture Pin"
+            <CustomDropdown
+              placeholder="Select Moisture Pin"
               value={moisturePin}
-              onChangeText={setMoisturePin}
-              placeholderTextColor="#aaa"
-              keyboardType="numeric"
+              options={pinOptions}
+              onSelect={setMoisturePin}
+              isOpen={showPinDropdown}
+              setIsOpen={setShowPinDropdown}
+              zIndex={1000}
             />
-
-            <Text style={styles.inputLabel}>Care Notes</Text>
-            <TextInput
-              style={[styles.inputModern, styles.textArea]}
-              placeholder="Enter care instructions"
-              value={careNotes}
-              onChangeText={setCareNotes}
-              placeholderTextColor="#aaa"
-              multiline={true}
-              numberOfLines={4}
-            />
-
-            {/* Thresholds Section */}
-            <Text style={styles.thresholdsHeader}>Thresholds</Text>
-            
-            {/* Moisture Range */}
-            <View style={styles.thresholdRow}>
-              <Text style={styles.thresholdLabel}>Moisture Range (%)</Text>
-              <View style={styles.rangeContainer}>
-                <TextInput
-                  style={styles.rangeInput}
-                  placeholder="30"
-                  value={thresholds.moisture.min}
-                  onChangeText={(value) => handleThresholdChange('moisture', 'min', value)}
-                  placeholderTextColor="#aaa"
-                  keyboardType="numeric"
-                />
-                <Text style={styles.rangeText}>to</Text>
-                <TextInput
-                  style={styles.rangeInput}
-                  placeholder="60"
-                  value={thresholds.moisture.max}
-                  onChangeText={(value) => handleThresholdChange('moisture', 'max', value)}
-                  placeholderTextColor="#aaa"
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-
-            {/* Temperature Range */}
-            <View style={styles.thresholdRow}>
-              <Text style={styles.thresholdLabel}>Temperature Range (°C)</Text>
-              <View style={styles.rangeContainer}>
-                <TextInput
-                  style={styles.rangeInput}
-                  placeholder="20"
-                  value={thresholds.temperature.min}
-                  onChangeText={(value) => handleThresholdChange('temperature', 'min', value)}
-                  placeholderTextColor="#aaa"
-                  keyboardType="numeric"
-                />
-                <Text style={styles.rangeText}>to</Text>
-                <TextInput
-                  style={styles.rangeInput}
-                  placeholder="30"
-                  value={thresholds.temperature.max}
-                  onChangeText={(value) => handleThresholdChange('temperature', 'max', value)}
-                  placeholderTextColor="#aaa"
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-
-            {/* Light Range */}
-            <View style={styles.thresholdRow}>
-              <Text style={styles.thresholdLabel}>Light Range (%)</Text>
-              <View style={styles.rangeContainer}>
-                <TextInput
-                  style={styles.rangeInput}
-                  placeholder="50"
-                  value={thresholds.light.min}
-                  onChangeText={(value) => handleThresholdChange('light', 'min', value)}
-                  placeholderTextColor="#aaa"
-                  keyboardType="numeric"
-                />
-                <Text style={styles.rangeText}>to</Text>
-                <TextInput
-                  style={styles.rangeInput}
-                  placeholder="80"
-                  value={thresholds.light.max}
-                  onChangeText={(value) => handleThresholdChange('light', 'max', value)}
-                  placeholderTextColor="#aaa"
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-
-            {/* Air Quality Range */}
-            <View style={styles.thresholdRow}>
-              <Text style={styles.thresholdLabel}>Air Quality Range (%)</Text>
-              <View style={styles.rangeContainer}>
-                <TextInput
-                  style={styles.rangeInput}
-                  placeholder="40"
-                  value={thresholds.airQuality.min}
-                  onChangeText={(value) => handleThresholdChange('airQuality', 'min', value)}
-                  placeholderTextColor="#aaa"
-                  keyboardType="numeric"
-                />
-                <Text style={styles.rangeText}>to</Text>
-                <TextInput
-                  style={styles.rangeInput}
-                  placeholder="70"
-                  value={thresholds.airQuality.max}
-                  onChangeText={(value) => handleThresholdChange('airQuality', 'max', value)}
-                  placeholderTextColor="#aaa"
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-
-
-
-
 
             <TouchableOpacity
               style={styles.submitBtnModern}
@@ -638,7 +501,6 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={20} color="#666" />
           </TouchableOpacity>
 
-          {/* Updated Notifications Menu Item */}
           <TouchableOpacity
             style={styles.menuItem}
             onPress={handleNotificationsPress}
@@ -781,7 +643,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  // New notification-specific styles
+  // Notification-specific styles
   notificationIconWrapper: {
     position: "relative",
   },
@@ -874,24 +736,6 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 8,
   },
-  uploadArea: {
-    borderWidth: 2,
-    borderColor: "#e0e0e0",
-    borderStyle: "dashed",
-    borderRadius: 16,
-    width: "100%",
-    height: 120,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-    backgroundColor: "#fafafa",
-  },
-  uploadText: {
-    color: "#888",
-    fontSize: 16,
-    marginTop: 8,
-    fontWeight: "500",
-  },
   inputModern: {
     width: "100%",
     height: 50,
@@ -904,69 +748,61 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 16,
   },
-  addSensorLabel: {
-    fontWeight: "bold",
-    fontSize: 18,
-    alignSelf: "flex-start",
-    marginTop: 8,
-    marginBottom: 8,
-    color: "#333",
-  },
-  sensorDescription: {
-    fontSize: 14,
-    color: "#666",
-    alignSelf: "flex-start",
-    marginBottom: 16,
-  },
-  sensorsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
+
+  // Custom Dropdown Styles
+  dropdownContainer: {
     width: "100%",
-    marginBottom: 24,
-    gap: 10,
-  },
-  sensorContainer: {
-    width: "47%",
     marginBottom: 16,
+    position: "relative",
   },
-  sensorBtnModern: {
+  dropdownButton: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.03,
-    shadowRadius: 2,
-    elevation: 1,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  sensorSelected: {
-    borderColor: "#174d3c",
-    backgroundColor: "#e8f5e8",
-  },
-  sensorIconModern: {
-    marginRight: 8,
-  },
-  sensorLabelModern: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#333",
-    flex: 1,
-  },
-  sensorIdInput: {
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: "#f0f0f0",
+    justifyContent: "space-between",
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: "#f8f8f8",
     borderWidth: 1,
-    borderColor: "#ddd",
-    paddingHorizontal: 12,
-    fontSize: 14,
+    borderColor: "#e0e0e0",
+    paddingHorizontal: 16,
+  },
+  dropdownText: {
+    fontSize: 16,
     color: "#333",
   },
+  placeholderText: {
+    color: "#aaa",
+  },
+  dropdownMenu: {
+    position: "absolute",
+    top: 52,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
+    maxHeight: 200,
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: "#333",
+  },
+
   submitBtnModern: {
     backgroundColor: "#174d3c",
     borderRadius: 16,
@@ -1012,51 +848,5 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 16,
     color: "#666",
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: "top",
-    paddingTop: 12,
-  },
-  thresholdsHeader: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginTop: 24,
-    marginBottom: 16,
-    alignSelf: "flex-start",
-  },
-  thresholdRow: {
-    width: "100%",
-    marginBottom: 16,
-  },
-  thresholdLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 8,
-  },
-  rangeContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  rangeInput: {
-    flex: 1,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: "#f8f8f8",
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    paddingHorizontal: 12,
-    fontSize: 14,
-    color: "#333",
-    textAlign: "center",
-  },
-  rangeText: {
-    fontSize: 14,
-    color: "#666",
-    marginHorizontal: 12,
-    fontWeight: "500",
   },
 });
