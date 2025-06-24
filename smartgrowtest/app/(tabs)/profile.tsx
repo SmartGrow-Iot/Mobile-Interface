@@ -14,6 +14,8 @@ import { useRouter } from "expo-router";
 import { useAuth } from "../../contexts/AuthContext";
 import { userService } from "../../services/userService";
 import { useNotifications } from "../../hooks/useNotifications";
+import { apiRequest } from "../../services/api";
+import { plantService } from "../../services/plantService";
 import Header from "../../components/Header";
 
 // Define interfaces at the top level
@@ -39,14 +41,18 @@ export default function ProfileScreen() {
   const [showAddPlant, setShowAddPlant] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
 
-  // Plant form states - simplified
+  // Plant form states - enhanced with new fields
   const [plantName, setPlantName] = useState("");
   const [group, setGroup] = useState(user?.groupNumber || "Group 10");
   const [plantType, setPlantType] = useState("");
   const [zone, setZone] = useState("");
   const [moisturePin, setMoisturePin] = useState("");
+  const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [moistureMinThreshold, setMoistureMinThreshold] = useState("30");
+  const [moistureMaxThreshold, setMoistureMaxThreshold] = useState("70");
 
-  // Dropdown states - ADD THE MISSING STATE
+  // Dropdown states
   const [showPlantTypeDropdown, setShowPlantTypeDropdown] = useState(false);
   const [showZoneDropdown, setShowZoneDropdown] = useState(false);
   const [showPinDropdown, setShowPinDropdown] = useState(false);
@@ -74,10 +80,10 @@ export default function ProfileScreen() {
 
   const plantTypeOptions: DropdownOption[] = [
     { label: "Chilli", value: "chilli" },
-    { label: "Eggplant", value: "eggplant" },
+    { label: "Eggplant", value: "eggplant" }
   ];
 
-  // Custom Dropdown Component - MOVE BEFORE USAGE
+  // Custom Dropdown Component
   const CustomDropdown: React.FC<CustomDropdownProps> = ({
     placeholder,
     value,
@@ -195,55 +201,83 @@ export default function ProfileScreen() {
     }
   };
 
-  // Submit plant form - simplified
-  const handleSubmitPlant = () => {
-    // Validate required fields
-    if (!plantName.trim()) {
-      Alert.alert("Error", "Please enter plant name");
-      return;
-    }
-    if (!zone.trim()) {
-      Alert.alert("Error", "Please select a zone");
-      return;
-    }
-    if (!moisturePin.trim()) {
-      Alert.alert("Error", "Please select a moisture pin");
-      return;
-    }
+  // Reset plant form
+  const resetPlantForm = () => {
+    setPlantName("");
+    setPlantType("");
+    setZone("");
+    setMoisturePin("");
+    setDescription("");
+    setImageUrl("");
+    setMoistureMinThreshold("30");
+    setMoistureMaxThreshold("70");
+    setShowPlantTypeDropdown(false);
+    setShowZoneDropdown(false);
+    setShowPinDropdown(false);
+  };
 
-    // Prepare simplified plant data
-    const plantData = {
-      name: plantName.trim(),
+  // Submit plant form - enhanced with API integration and validation
+  const handleSubmitPlant = async () => {
+    // Prepare form data for validation
+    const formData = {
+      name: plantName,
+      zone: zone,
+      moisturePin: moisturePin,
+      description: description,
+      imageUrl: imageUrl,
+      moistureMinThreshold: moistureMinThreshold,
+      moistureMaxThreshold: moistureMaxThreshold,
       userId: user?.id || "demo-user",
-      zone: zone.trim(),
-      moisturePin: parseInt(moisturePin),
-      type: plantType.trim() || "vegetable",
-      species: plantType.trim() || "Unknown",
-      thresholds: {
-        moisture: { min: 30, max: 70 },
-        temperature: { min: 20, max: 30 },
-        humidity: { min: 40, max: 70 },
-        light: { min: 50, max: 80 },
-      },
     };
 
-    console.log("Plant Data:", plantData);
-    Alert.alert("Success", "Plant added successfully!", [
-      {
-        text: "OK",
-        onPress: () => {
-          // Reset form
-          setPlantName("");
-          setPlantType("");
-          setZone("");
-          setMoisturePin("");
-          setShowPlantTypeDropdown(false);
-          setShowZoneDropdown(false);
-          setShowPinDropdown(false);
-          setShowAddPlant(false);
+    // Use plant service validation
+    const validation = plantService.validatePlantData({
+      ...formData,
+      thresholds: {
+        moisture: {
+          min: parseFloat(moistureMinThreshold),
+          max: parseFloat(moistureMaxThreshold),
         },
       },
-    ]);
+    });
+
+    if (!validation.isValid) {
+      Alert.alert("Validation Error", validation.errors.join("\n"));
+      return;
+    }
+
+    // Format data for API submission
+    const plantData = plantService.formatPlantData(formData);
+
+    try {
+      setLoading(true);
+      console.log("Creating plant with validated data:", plantData);
+
+      // Use plant service to create the plant
+      const response = await plantService.createPlant(plantData);
+
+      console.log("Plant created successfully:", response);
+
+      Alert.alert("Success", "Plant added successfully!", [
+        {
+          text: "OK",
+          onPress: () => {
+            resetPlantForm();
+            setShowAddPlant(false);
+          },
+        },
+      ]);
+    } catch (error) {
+      console.error("Error creating plant:", error);
+      Alert.alert(
+        "Error",
+        error instanceof Error
+          ? error.message
+          : "Failed to add plant. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Navigate to notifications screen
@@ -358,7 +392,7 @@ export default function ProfileScreen() {
     );
   }
 
-  // Add Plant View - Updated with dropdowns
+  // Add Plant View - Enhanced with new fields
   if (showAddPlant) {
     return (
       <View style={styles.container}>
@@ -372,18 +406,26 @@ export default function ProfileScreen() {
           ]}
         />
 
-        <ScrollView style={styles.content}>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <Text style={[styles.subHeader, styles.plantInfoHeader]}>
             Plant Information
           </Text>
           <View style={styles.addPlantCardContainer}>
-            <Text style={styles.inputLabel}>Plant Name</Text>
+            {loading && (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="large" color="#174d3c" />
+                <Text style={styles.loadingText}>Creating plant...</Text>
+              </View>
+            )}
+
+            <Text style={styles.inputLabel}>Plant Name *</Text>
             <TextInput
-              style={styles.inputModern}
+              style={[styles.inputModern, loading && styles.inputDisabled]}
               placeholder="Enter Plant Name"
               value={plantName}
               onChangeText={setPlantName}
               placeholderTextColor="#aaa"
+              editable={!loading}
             />
 
             <Text style={styles.inputLabel}>Plant Type</Text>
@@ -397,7 +439,7 @@ export default function ProfileScreen() {
               zIndex={3000}
             />
 
-            <Text style={styles.inputLabel}>Zone</Text>
+            <Text style={styles.inputLabel}>Zone *</Text>
             <CustomDropdown
               placeholder="Select Zone"
               value={zone}
@@ -408,7 +450,7 @@ export default function ProfileScreen() {
               zIndex={2000}
             />
 
-            <Text style={styles.inputLabel}>Moisture Pin</Text>
+            <Text style={styles.inputLabel}>Moisture Pin *</Text>
             <CustomDropdown
               placeholder="Select Moisture Pin"
               value={moisturePin}
@@ -419,16 +461,100 @@ export default function ProfileScreen() {
               zIndex={1000}
             />
 
+            <Text style={styles.inputLabel}>Description *</Text>
+            <TextInput
+              style={[
+                styles.inputModern,
+                styles.textAreaInput,
+                loading && styles.inputDisabled,
+              ]}
+              placeholder="Enter plant description (care instructions, notes, etc.)"
+              value={description}
+              onChangeText={setDescription}
+              placeholderTextColor="#aaa"
+              multiline
+              numberOfLines={3}
+              editable={!loading}
+            />
+
+            <Text style={styles.inputLabel}>Image URL (Optional)</Text>
+            <TextInput
+              style={[styles.inputModern, loading && styles.inputDisabled]}
+              placeholder="Enter image URL (e.g., https://example.com/plant.jpg)"
+              value={imageUrl}
+              onChangeText={setImageUrl}
+              placeholderTextColor="#aaa"
+              editable={!loading}
+              autoCapitalize="none"
+            />
+
+            <Text style={styles.sectionTitle}>Moisture Thresholds</Text>
+            <Text style={styles.sectionSubtitle}>
+              Set optimal moisture levels for automatic watering
+            </Text>
+
+            <View style={styles.thresholdContainer}>
+              <View style={styles.thresholdInputContainer}>
+                <Text style={styles.inputLabel}>Minimum Moisture (%)</Text>
+                <TextInput
+                  style={[
+                    styles.inputModern,
+                    styles.thresholdInput,
+                    loading && styles.inputDisabled,
+                  ]}
+                  placeholder="30"
+                  value={moistureMinThreshold}
+                  onChangeText={setMoistureMinThreshold}
+                  placeholderTextColor="#aaa"
+                  keyboardType="numeric"
+                  editable={!loading}
+                />
+              </View>
+
+              <View style={styles.thresholdInputContainer}>
+                <Text style={styles.inputLabel}>Maximum Moisture (%)</Text>
+                <TextInput
+                  style={[
+                    styles.inputModern,
+                    styles.thresholdInput,
+                    loading && styles.inputDisabled,
+                  ]}
+                  placeholder="70"
+                  value={moistureMaxThreshold}
+                  onChangeText={setMoistureMaxThreshold}
+                  placeholderTextColor="#aaa"
+                  keyboardType="numeric"
+                  editable={!loading}
+                />
+              </View>
+            </View>
+
+            <View style={styles.thresholdInfo}>
+              <Ionicons
+                name="information-circle-outline"
+                size={16}
+                color="#666"
+              />
+              <Text style={styles.thresholdInfoText}>
+                When moisture drops below minimum, automatic watering will
+                trigger. Values should be between 0-100%.
+              </Text>
+            </View>
+
             <TouchableOpacity
-              style={styles.submitBtnModern}
+              style={[styles.submitBtnModern, loading && styles.buttonDisabled]}
               onPress={handleSubmitPlant}
+              disabled={loading}
             >
-              <Text style={styles.submitBtnTextModern}>SUBMIT</Text>
+              <Text style={styles.submitBtnTextModern}>
+                {loading ? "CREATING PLANT..." : "CREATE PLANT"}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.cancelButton}
+              style={[styles.cancelButton, loading && styles.buttonDisabled]}
               onPress={() => setShowAddPlant(false)}
+              disabled={loading}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
@@ -726,6 +852,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
     alignItems: "center",
+    position: "relative",
   },
   inputGroup: {
     marginBottom: 20,
@@ -747,6 +874,72 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
     marginBottom: 16,
+  },
+  inputDisabled: {
+    opacity: 0.6,
+    backgroundColor: "#f0f0f0",
+  },
+  textAreaInput: {
+    height: 80,
+    textAlignVertical: "top",
+    paddingTop: 12,
+  },
+
+  // Enhanced threshold styles
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#174d3c",
+    marginTop: 20,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  thresholdContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 12,
+  },
+  thresholdInputContainer: {
+    flex: 1,
+  },
+  thresholdInput: {
+    marginBottom: 0,
+  },
+  thresholdInfo: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#f0f8ff",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  thresholdInfoText: {
+    fontSize: 12,
+    color: "#666",
+    marginLeft: 8,
+    flex: 1,
+    lineHeight: 16,
+  },
+
+  // Loading overlay for add plant
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+    borderRadius: 20,
   },
 
   // Custom Dropdown Styles
