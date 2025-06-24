@@ -1,4 +1,4 @@
-// services/sensorService.ts
+// services/sensorService.ts - Fixed to handle actual API response
 import { apiRequest } from "./api";
 import {
   EnvironmentalDataResponse,
@@ -9,27 +9,42 @@ import {
 } from "../types/Sensor";
 
 export const sensorService = {
-  // Fetch environmental data (shared across zones)
+  // Fetch environmental data from Zone 2 (shared for humidity, light, temp, airQuality)
   fetchEnvironmentalData:
     async (): Promise<EnvironmentalDataResponse | null> => {
       try {
-        console.log("Fetching environmental data...");
+        console.log("Fetching environmental data from Zone 2...");
+
+        // Fetch specifically from zone2 for environmental data
         const response: EnvironmentalDataResponse[] = await apiRequest(
-          `/logs/sensors?latest=true&limit=1`
+          `/logs/sensors?zoneId=zone2&latest=true&limit=1`
         );
 
-        if (response.length > 0) {
-          console.log("Environmental data fetched:", response[0]);
-          return response[0];
+        console.log("Raw API response:", response);
+
+        if (response && response.length > 0) {
+          const data = response[0];
+          console.log("Environmental data fetched from Zone 2:", data);
+          console.log("Zone sensors:", data.zoneSensors);
+
+          // Log individual sensor values for debugging
+          console.log("Temperature:", data.zoneSensors.temp);
+          console.log("Humidity:", data.zoneSensors.humidity);
+          console.log("Light:", data.zoneSensors.light);
+          console.log("Air Quality:", data.zoneSensors.airQuality);
+
+          return data;
         }
+
+        console.log("No environmental data found for Zone 2");
         return null;
       } catch (error) {
-        console.error("Error fetching environmental data:", error);
+        console.error("Error fetching environmental data from Zone 2:", error);
         throw error;
       }
     },
 
-  // Fetch soil moisture data for all zones
+  // Fetch soil moisture data for all zones (plant-specific by pin)
   fetchSoilMoistureData: async (): Promise<{
     soilData: SoilMoistureData[];
     availableZones: string[];
@@ -37,6 +52,7 @@ export const sensorService = {
     try {
       const zones = ["zone1", "zone2", "zone3", "zone4"];
       const allSoilData: SoilMoistureData[] = [];
+      const availableZones: string[] = [];
 
       console.log("Starting to fetch soil moisture data for all zones...");
 
@@ -58,10 +74,13 @@ export const sensorService = {
             continue;
           }
 
-          // Get latest sensor data for this zone
-          console.log(`Fetching sensor data for ${zone}...`);
+          // Add this zone to available zones if it has plants
+          availableZones.push(zone);
+
+          // Get latest sensor data for this specific zone (for soil moisture only)
+          console.log(`Fetching soil moisture sensor data for ${zone}...`);
           const sensorResponse: EnvironmentalDataResponse[] = await apiRequest(
-            `/logs/sensors?zoneId=${zone}&latest=true`
+            `/logs/sensors?zoneId=${zone}&latest=true&limit=1`
           );
 
           console.log(`Sensor response for ${zone}:`, sensorResponse);
@@ -92,14 +111,14 @@ export const sensorService = {
           console.log(`Latest sensor data for ${zone}:`, latestData);
           console.log(`Soil moisture readings:`, latestData.soilMoistureByPin);
 
-          // Process each plant in this zone
+          // Process each plant in this zone for soil moisture only
           for (const plant of plants) {
             try {
               console.log(
                 `Processing plant: ${plant.name}, pin: ${plant.moisturePin}`
               );
 
-              // Find the moisture data for this plant's pin
+              // Find the moisture data for this plant's specific pin
               const moistureReading = latestData.soilMoistureByPin.find(
                 (reading) => reading.pin === plant.moisturePin
               );
@@ -155,7 +174,7 @@ export const sensorService = {
 
       return {
         soilData: allSoilData,
-        availableZones: ["zone1", "zone2", "zone3", "zone4"], // Always show all zones
+        availableZones: availableZones, // Only zones with plants
       };
     } catch (error) {
       console.error("Error fetching soil moisture data:", error);
@@ -187,7 +206,8 @@ export const sensorService = {
     sensorType: SensorType,
     customThresholds?: { min: number; max: number }
   ): boolean => {
-    if (customThresholds) {
+    if (sensorType === "soil" && customThresholds) {
+      // For soil moisture, use plant-specific thresholds
       return value < customThresholds.min || value > customThresholds.max;
     }
 
@@ -202,13 +222,13 @@ export const sensorService = {
 
   getSensorIconName: (sensorType: SensorType): string => {
     switch (sensorType) {
-      case "temperature":
+      case "temp":
         return "thermometer-outline";
       case "humidity":
         return "water-outline";
       case "light":
         return "sunny-outline";
-      case "airquality":
+      case "airQuality":
         return "cloud-outline";
       default:
         return "hardware-chip-outline";
@@ -217,13 +237,13 @@ export const sensorService = {
 
   getSensorColor: (sensorType: SensorType): string => {
     switch (sensorType) {
-      case "temperature":
+      case "temp":
         return "#e74c3c";
       case "humidity":
         return "#3498db";
       case "light":
         return "#f39c12";
-      case "airquality":
+      case "airQuality":
         return "#95a5a6";
       default:
         return "#666";

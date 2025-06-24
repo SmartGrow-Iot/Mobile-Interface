@@ -1,4 +1,4 @@
-// components/features/sensors/SensorDetailComponents.tsx
+// components/features/sensors/SensorDetailComponents.tsx - Simplified environmental data card
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,7 +12,7 @@ import {
 } from "../../../types/Sensor";
 import { sensorService } from "../../../services/sensorService";
 
-// Environmental Data Card Component
+// Environmental Data Card Component - Simplified without Zone 2 details
 export const EnvironmentalDataCard = ({
   data,
   sensorType,
@@ -32,8 +32,7 @@ export const EnvironmentalDataCard = ({
           <View style={styles.envDetails}>
             <Text style={styles.envTitle}>Environmental Data</Text>
             <Text style={styles.envSubtitle}>
-              Latest reading from{" "}
-              {sensorService.getZoneDisplayName(data.zoneId)}
+              Latest reading from environmental sensors
             </Text>
           </View>
         </View>
@@ -75,7 +74,7 @@ export const EnvironmentalDataCard = ({
   );
 };
 
-// Soil Moisture Plant Card Component
+// Soil Moisture Plant Card Component - Individual plant data by pin
 export const SoilMoisturePlantCard = ({
   plantData,
 }: {
@@ -138,7 +137,8 @@ export const SoilMoisturePlantCard = ({
         <View style={styles.warningContainer}>
           <Ionicons name="information-circle" size={16} color="#f39c12" />
           <Text style={[styles.warningText, { color: "#f39c12" }]}>
-            No sensor data available for this pin
+            No sensor data available for Pin {plantData.pin} in{" "}
+            {sensorService.getZoneDisplayName(plantData.zone)}
           </Text>
         </View>
       )}
@@ -169,6 +169,9 @@ export const ZoneSelector = ({
   return (
     <View style={styles.zoneSelectorContainer}>
       <Text style={styles.zoneSelectorTitle}>Select Zone</Text>
+      <Text style={styles.zoneSelectorSubtitle}>
+        Filter soil moisture data by zone
+      </Text>
       <View style={styles.zoneButtons}>
         {zones.map((zone) => (
           <TouchableOpacity
@@ -215,7 +218,7 @@ export const SensorHeader = ({
   );
 };
 
-// Summary Statistics Component
+// Summary Statistics Component - Simplified
 export const SummaryStats = ({
   sensorType,
   environmentalData,
@@ -251,15 +254,15 @@ export const SummaryStats = ({
               </Text>
               <Text style={styles.statLabel}>Critical</Text>
             </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>
+                {soilMoistureData.filter((p) => p.moisture > 0).length}
+              </Text>
+              <Text style={styles.statLabel}>With Data</Text>
+            </View>
           </>
         ) : environmentalData ? (
           <>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>
-                {sensorService.getZoneDisplayName(environmentalData.zoneId)}
-              </Text>
-              <Text style={styles.statLabel}>Data Source</Text>
-            </View>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>
                 {environmentalData &&
@@ -284,6 +287,10 @@ export const SummaryStats = ({
                 {sensorConfig.unit}
               </Text>
               <Text style={styles.statLabel}>Current</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>All Zones</Text>
+              <Text style={styles.statLabel}>Coverage</Text>
             </View>
           </>
         ) : null}
@@ -397,6 +404,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#333",
+    marginBottom: 4,
+  },
+  zoneSelectorSubtitle: {
+    fontSize: 14,
+    color: "#666",
     marginBottom: 12,
   },
   zoneButtons: {

@@ -1,11 +1,11 @@
-// types/Sensor.ts
+// types/Sensor.ts - Fixed to match actual API response
 export interface EnvironmentalDataResponse {
-  recordId: string;
+  recordId?: string; // Made optional since API doesn't always return it
   zoneId: string;
   timestamp: string;
   zoneSensors: {
     humidity: number;
-    temp: number;
+    temp: number; // API returns 'temp', not 'temperature'
     light: number;
     airQuality: number;
   };
@@ -52,14 +52,15 @@ export interface SensorConfig {
 }
 
 export type SensorType =
-  | "temperature"
+  | "temp" // Changed from "temperature" to match API
   | "humidity"
   | "light"
-  | "airquality"
+  | "airQuality" // This matches the API
   | "soil";
 
 export const sensorConfigs: Record<SensorType, SensorConfig> = {
-  temperature: {
+  temp: {
+    // Changed from "temperature"
     name: "Temperature Sensor",
     icon: "🌡️",
     description: "Monitor ambient temperature for optimal plant growth",
@@ -80,7 +81,8 @@ export const sensorConfigs: Record<SensorType, SensorConfig> = {
     unit: "%",
     thresholds: { min: 30, max: 90, critical: 20 },
   },
-  airquality: {
+  airQuality: {
+    // This matches the API response
     name: "Air Quality Sensor",
     icon: "🌬️",
     description: "Monitor air quality and environmental conditions",
