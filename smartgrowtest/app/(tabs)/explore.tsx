@@ -20,6 +20,8 @@ const getStarted = [
     subtitle: "Quick start guide in HTML or PDF",
     icon: <Ionicons name="document" size={28} color="#fff" />,
     color: "#2ecc40",
+    action: "quick-start-pdf",
+    path: "QuickStartGuide.pdf",
   },
   {
     title: "Teaser Video",
@@ -33,23 +35,19 @@ const getStarted = [
 const onboarding = [
   {
     title: "User Manual",
-    subtitle: "User manual in HTML or PDF",
+    subtitle: "Comprehensive user manual and documentation",
     icon: <Ionicons name="document-text" size={28} color="#fff" />,
     color: "#ff3b30",
-    action: "pdf",
-    path: "QuickStartGuide.pdf",
+    action: "user-manual-pdf",
+    path: "User_Manual.pdf",
   },
+
   {
-    title: "Training Slides",
-    subtitle: "Comprehensive training slideshow",
-    icon: <FontAwesome5 name="slideshare" size={24} color="#fff" />,
-    color: "#3498db",
-  },
-  {
-    title: "Full Video Walkthrough",
-    subtitle: "Step-by-step instructional video",
+    title: "Promotional Video",
+    subtitle: "Discover SmartGrow's features and benefits",
     icon: <Ionicons name="videocam" size={28} color="#fff" />,
     color: "#e056fd",
+    action: "promotional-video",
   },
 ];
 
@@ -91,14 +89,63 @@ function Card({
 export default function ExploreScreen() {
   const router = useRouter();
 
-  // Function to open PDF using expo-asset and Sharing
-  const openPDFWithSharing = async () => {
+  // Function to open Quick Start Guide PDF
+  const openQuickStartGuide = async () => {
     try {
-      console.log("Attempting to open PDF with expo-asset...");
+      console.log("Attempting to open Quick Start Guide PDF...");
 
       // Load the PDF as an asset
       const asset = Asset.fromModule(
         require("../../assets/QuickStartGuide.pdf")
+      );
+      console.log("Asset created:", asset);
+
+      // Download the asset to local storage
+      await asset.downloadAsync();
+      console.log("Asset downloaded successfully");
+      console.log("Asset local URI:", asset.localUri);
+
+      if (!asset.localUri) {
+        Alert.alert(
+          "Error",
+          "Could not load PDF asset - no local URI available"
+        );
+        return;
+      }
+
+      // Check if sharing is available on this device
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert(
+          "Sharing Not Available",
+          "Sharing is not available on this device"
+        );
+        return;
+      }
+
+      console.log("Sharing PDF from:", asset.localUri);
+
+      // Share the PDF file (this will open it in the system PDF viewer)
+      await Sharing.shareAsync(asset.localUri, {
+        mimeType: "application/pdf",
+        dialogTitle: "Open Quick Start Guide",
+        UTI: "com.adobe.pdf",
+      });
+
+      console.log("PDF shared successfully");
+    } catch (error) {
+      console.error("Error opening Quick Start Guide PDF:", error);
+    }
+  };
+
+  // Function to open User Manual PDF
+  const openUserManual = async () => {
+    try {
+      console.log("Attempting to open User Manual PDF...");
+
+      // Load the PDF as an asset
+      const asset = Asset.fromModule(
+        require("../../assets/User_Manual.pdf")
       );
       console.log("Asset created:", asset);
 
@@ -136,16 +183,19 @@ export default function ExploreScreen() {
 
       console.log("PDF shared successfully");
     } catch (error) {
-      console.error("Error opening PDF with expo-asset:", error);
-
+      console.error("Error opening User Manual PDF:", error);
     }
   };
 
   const handleCardPress = async (item: any) => {
-    if (item.action === "pdf" && item.path) {
-      await openPDFWithSharing();
+    if (item.action === "quick-start-pdf") {
+      await openQuickStartGuide();
+    } else if (item.action === "user-manual-pdf") {
+      await openUserManual();
     } else if (item.action === "video") {
       router.push("/teaser-video");
+    } else if (item.action === "promotional-video") {
+      router.push("/promotional-video");
     } else {
       Alert.alert("Coming Soon", "This feature will be available soon!");
     }
