@@ -647,7 +647,7 @@ export default function ActuatorOverride() {
             const newValue = isCurrentlyOn ? "OFF" : "ON";
 
             const actuatorCalledInAPI = type === "watering" ? "water" : type;
-            const assignedZone = actuatorCalledInAPI === "water" ? zone : "zone1";
+            const assignedZone = actuatorCalledInAPI === "water" ? zone : "zone2";
             const actuatorActionToDoInAPI = `${actuatorCalledInAPI}_${isCurrentlyOn ? 'off' : 'on'}`;
         if (!currentActuatorId) {
             console.log("using current actuatorIds: ", actuatorIds);
