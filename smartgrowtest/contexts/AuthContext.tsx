@@ -39,27 +39,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (firebaseUser: FirebaseUser | null) => {
-        if (firebaseUser) {
-          const userData: User = {
-            id: firebaseUser.uid,
-            email: firebaseUser.email || "",
-            name: firebaseUser.displayName || "User",
-            groupNumber: "", // You can fetch this from your API if needed
-          };
-          setUser(userData);
-          setIsAuthenticated(true);
-        } else {
+    let unsubscribe: (() => void) | undefined;
+    
+    try {
+      unsubscribe = onAuthStateChanged(
+        auth,
+        (firebaseUser: FirebaseUser | null) => {
+          try {
+            if (firebaseUser) {
+              const userData: User = {
+                id: firebaseUser.uid,
+                email: firebaseUser.email || "",
+                name: firebaseUser.displayName || "User",
+                groupNumber: "", // You can fetch this from your API if needed
+              };
+              setUser(userData);
+              setIsAuthenticated(true);
+            } else {
+              setUser(null);
+              setIsAuthenticated(false);
+            }
+          } catch (error) {
+            console.error("Error processing auth state:", error);
+            setUser(null);
+            setIsAuthenticated(false);
+          } finally {
+            setLoading(false);
+          }
+        },
+        (error) => {
+          console.error("Firebase auth error:", error);
           setUser(null);
           setIsAuthenticated(false);
+          setLoading(false);
         }
-        setLoading(false);
-      }
-    );
+      );
+    } catch (error) {
+      console.error("Error setting up auth listener:", error);
+      setUser(null);
+      setIsAuthenticated(false);
+      setLoading(false);
+    }
 
-    return unsubscribe;
+    return () => {
+      if (unsubscribe) {
+        try {
+          unsubscribe();
+        } catch (error) {
+          console.error("Error cleaning up auth listener:", error);
+        }
+      }
+    };
   }, []);
 
   // Register via your API (creates user in Firebase server-side)
