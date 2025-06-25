@@ -165,12 +165,12 @@ export default function ActuatorOverride() {
     useEffect(() => {
         const fetchLatestStatus = async () => {
             try {
-                // Fetch for light and fan from zone1
-                const logsFanLight = await apiRequest("/logs/action/zone/zone1?sortBy=latest");
+                // Fetch for light and fan from zone2
+                const logsFanLight = await apiRequest("/logs/action/zone/zone2?sortBy=latest");
                 // Fetch for watering from custom zone
                 const logsWater = await apiRequest(`/logs/action/zone/${zone}?sortBy=latest`);
                 if (!Array.isArray(logsFanLight) || !Array.isArray(logsWater)) {
-                    console.error("Unexpected response format", { logsZone1: logsFanLight, logsWater });
+                    console.error("Unexpected response format", { logsZone2: logsFanLight, logsWater });
                     return;
                 }
                 let latest: {
@@ -182,7 +182,7 @@ export default function ActuatorOverride() {
                     watering: null,
                     fan: null,
                 };
-                // Process logs from zone1 (light + fan only)
+                // Process logs from zone2 (light + fan only)
                 for (const log of logsFanLight) {
                     if (!latest.light && log.action.startsWith("light")) {
                         latest.light = log.action.endsWith("_on") ? "ON" : "OFF";
