@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,16 +10,37 @@ import {
 import { Video, ResizeMode } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as ScreenOrientation from 'expo-screen-orientation';
 
 export default function TeaserVideoPage() {
   const router = useRouter();
+
+  useEffect(() => {
+    // Lock to portrait orientation when component mounts
+    const lockOrientation = async () => {
+      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
+    };
+    
+    lockOrientation();
+
+    // Cleanup: unlock orientation when component unmounts
+    return () => {
+      ScreenOrientation.unlockAsync();
+    };
+  }, []);
+
+  const handleGoBack = async () => {
+    // Unlock orientation before going back
+    await ScreenOrientation.unlockAsync();
+    router.back();
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={handleGoBack}
         >
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
@@ -34,14 +55,15 @@ export default function TeaserVideoPage() {
             style={styles.video}
             useNativeControls
             resizeMode={ResizeMode.CONTAIN}
-            isLooping
+            shouldPlay
+            isLooping={false}
           />
         </View>
         
         <Text style={styles.description}>
-          Watch our promotional video to learn more about SmartGrow's features and capabilities.
+          Get a quick preview of SmartGrow's innovative features and capabilities.
         </Text>
-      </View>
+      </View>s
     </SafeAreaView>
   );
 }
