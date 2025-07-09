@@ -19,8 +19,6 @@ export const apiRequest = async (endpoint, options = {}) => {
   };
 
   try {
-    console.log("🔐 Sending token:", token?.substring(0, 30) + "...");
-    console.log("📡 Calling:", url);
     const response = await fetch(url, config);
 
     const contentType = response.headers.get("content-type");
@@ -30,7 +28,6 @@ export const apiRequest = async (endpoint, options = {}) => {
       data = await response.json();
     } else {
       const text = await response.text();
-      console.warn("⚠️ Response is not JSON. Raw text:", text.slice(0, 100));
       throw new Error("Server returned non-JSON response");
     }
 

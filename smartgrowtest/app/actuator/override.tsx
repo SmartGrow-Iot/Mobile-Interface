@@ -165,12 +165,12 @@ export default function ActuatorOverride() {
     useEffect(() => {
         const fetchLatestStatus = async () => {
             try {
-                // Fetch for light and fan from zone1
-                const logsFanLight = await apiRequest("/logs/action/zone/zone1?sortBy=latest");
+                // Fetch for light and fan from zone2
+                const logsFanLight = await apiRequest("/logs/action/zone/zone2?sortBy=latest");
                 // Fetch for watering from custom zone
                 const logsWater = await apiRequest(`/logs/action/zone/${zone}?sortBy=latest`);
                 if (!Array.isArray(logsFanLight) || !Array.isArray(logsWater)) {
-                    console.error("Unexpected response format", { logsZone1: logsFanLight, logsWater });
+                    console.error("Unexpected response format", { logsZone2: logsFanLight, logsWater });
                     return;
                 }
                 let latest: {
@@ -182,7 +182,7 @@ export default function ActuatorOverride() {
                     watering: null,
                     fan: null,
                 };
-                // Process logs from zone1 (light + fan only)
+                // Process logs from zone2 (light + fan only)
                 for (const log of logsFanLight) {
                     if (!latest.light && log.action.startsWith("light")) {
                         latest.light = log.action.endsWith("_on") ? "ON" : "OFF";
@@ -451,6 +451,18 @@ export default function ActuatorOverride() {
         }
     };
 
+    function getLocalTime() {
+        const date = new Date();
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0'); // local time
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = '00'; // set to 00 if you want fixed
+
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+    }
+
     // Save threshold value
     const handleSaveThreshold = async () => {
         if (!selectedThreshold || !inputValue.trim()) {
@@ -512,7 +524,7 @@ export default function ActuatorOverride() {
                                 amount: parseFloat(inputValue),
                                 trigger: "manual",
                                 triggerBy: user?.id || "unknown_user",
-                                timestamp: new Date().toISOString(),
+                                timestamp: getLocalTime(),
                             };
 
                             console.log(
@@ -670,7 +682,7 @@ export default function ActuatorOverride() {
               actuatorId: normalizedActuatorId,
               trigger: "manual",
               triggerBy: user?.id || "unknown_user",
-              timestamp: new Date().toISOString(),
+              timestamp: getLocalTime(),
               zone: assignedZone
            };
            console.log(
@@ -720,7 +732,7 @@ export default function ActuatorOverride() {
                 actuatorId: currentActuatorId,
                 trigger: "manual",
                 triggerBy: user?.id || "unknown_user",
-                timestamp: new Date().toISOString(),
+                timestamp: getLocalTime(),
                 zone: assignedZone
               };
 
@@ -820,47 +832,6 @@ export default function ActuatorOverride() {
                                 <Text style={styles.plantItem}>• Chilli</Text>
                                 <Text style={styles.plantItem}>• Egg</Text>
                             </View>
-                        </View>
-                    </View>
-                </Card>
-
-                {/* Current Readings Card */}
-                <Card style={styles.readingsCard}>
-                    <View style={styles.readingsHeader}>
-                        <Text style={styles.readingsTitle}>
-                            Current Readings
-                        </Text>
-                    </View>
-                    <View style={styles.readingsGrid}>
-                        <View style={styles.readingItem}>
-                            <Text style={styles.readingLabel}>Temp</Text>
-                            <Text style={styles.readingValue}>
-                                {readings.temp}
-                            </Text>
-                        </View>
-                        <View style={styles.readingItem}>
-                            <Text style={styles.readingLabel}>Humidity</Text>
-                            <Text style={styles.readingValue}>
-                                {readings.humidity}
-                            </Text>
-                        </View>
-                        <View style={styles.readingItem}>
-                            <Text style={styles.readingLabel}>Moisture</Text>
-                            <Text style={styles.readingValue}>
-                                {readings.moisture}
-                            </Text>
-                        </View>
-                        <View style={styles.readingItem}>
-                            <Text style={styles.readingLabel}>Light</Text>
-                            <Text style={styles.readingValue}>
-                                {readings.light}
-                            </Text>
-                        </View>
-                        <View style={styles.readingItem}>
-                            <Text style={styles.readingLabel}>Fan</Text>
-                            <Text style={styles.readingValue}>
-                                {readings.fan}
-                            </Text>
                         </View>
                     </View>
                 </Card>
